@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
@@ -76,42 +77,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, username: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: Platform.OS === 'web' 
-          ? `${window.location.origin}/(auth)/signin?confirmed=true`
-          : 'myapp://auth/signin?confirmed=true',
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            email,
+            // Add any additional user metadata here
+          },
+          emailRedirectTo: Platform.OS === 'web' 
+            ? `${window.location.origin}/(auth)/signin?confirmed=true`
+            : 'myapp://auth/signin?confirmed=true',
+        },
+      });
 
-    if (error) return { error };
-
-    // Create user profile
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email,
-          username,
-          highlight_color: '#8B5CF6',
-        });
-
-      if (profileError) return { error: profileError };
-
-      // Create initial user stats
-      const { error: statsError } = await supabase
-        .from('user_stats')
-        .insert({
-          user_id: data.user.id,
-        });
-
-      if (statsError) return { error: statsError };
+      if (error) {
+        console.error('Signup error:', error);
+        return { error };
+      }
+      
+      // The user should receive a confirmation email
+      // The email might take a few moments to arrive
+      return { 
+        data: { 
+          ...data, 
+          message: data.user?.identities?.length === 0 
+            ? 'This email is already registered. Please sign in instead.'
+            : 'Please check your email to confirm your account.'
+        }, 
+        error: null 
+      };
+    } catch (error) {
+      console.error('Signup error:', error);
+      return { 
+        error: error instanceof Error 
+          ? error 
+          : new Error('An unknown error occurred during signup') 
+      };
     }
-
-    return { error: null };
   };
 
   const signOut = async () => {

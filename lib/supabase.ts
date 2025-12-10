@@ -1,3 +1,4 @@
+import './polyfills';
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
@@ -20,7 +21,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
-    flowType: 'pkce',
+    flowType: 'implicit',
   },
   realtime: {
     params: {
