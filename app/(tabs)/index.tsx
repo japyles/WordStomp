@@ -36,13 +36,13 @@ export default function Home() {
 
         <View style={styles.quickActions}>
           <TouchableOpacity style={styles.primaryAction}>
-            <Play size={24} color="#FFFFFF" />
+            <Play size={24} color="#00281F" />
             <Text style={styles.primaryActionText}>Quick Match</Text>
           </TouchableOpacity>
 
           <View style={styles.secondaryActions}>
             <TouchableOpacity style={styles.secondaryAction}>
-              <Users size={20} color="#8B5CF6" />
+              <Users size={20} color="#00281F" />
               <Text style={styles.secondaryActionText}>Challenge Friend</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryAction}>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryAction: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#7BD4CC',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryActionText: {
-    color: '#FFFFFF',
+    color: '#00281F',
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
   },
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   secondaryAction: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFB7A9',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   secondaryActionText: {
-    color: '#8B5CF6',
+    color: '#00281F',
     fontSize: 14,
     fontFamily: 'Inter-Medium',
   },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#1E293B',
+    color: '#00281F',
     marginBottom: 16,
   },
   categoryGrid: {
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#1E293B',
+    color: '#00281F',
   },
   gridSizes: {
     gap: 8,
@@ -204,22 +204,22 @@ const styles = StyleSheet.create({
   gridSizeCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#FFB7A9',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
   },
   gridSizeCardActive: {
-    backgroundColor: '#8B5CF6',
-    borderColor: '#8B5CF6',
+    backgroundColor: '#7BD4CC',
+    borderColor: '#7BD4CC',
   },
   gridSizeText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#1E293B',
+    color: '#00281F',
   },
   gridSizeTextActive: {
-    color: '#FFFFFF',
+    color: '#00281F',
   },
   recentGames: {
     backgroundColor: '#FFFFFF',

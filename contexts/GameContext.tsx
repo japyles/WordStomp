@@ -3,6 +3,11 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Database, GameState } from '@/types/database';
 import { useAuth } from './AuthContext';
+import { 
+  getPuzzlesByCategoryAndSize,
+  GridSize,
+  Category
+} from '@/lib/wordSearchPuzzles';
 
 type Game = Database['public']['Tables']['games']['Row'];
 
@@ -11,7 +16,7 @@ interface GameContextType {
   gameChannel: RealtimeChannel | null;
   loading: boolean;
   error: string | null;
-  createGame: (category: string, gridSize: { width: number; height: number }) => Promise<string | null>;
+  createGame: (category: Category, gridSize: GridSize) => Promise<string | null>;
   joinGame: (gameId: string) => Promise<boolean>;
   leaveGame: () => void;
   updateGameState: (gameState: GameState) => Promise<void>;
@@ -35,19 +40,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, [gameChannel]);
 
-  const createGame = async (category: string, gridSize: { width: number; height: number }) => {
+  const createGame = async (category: Category, gridSize: GridSize) => {
     if (!user) return null;
 
     setLoading(true);
     setError(null);
 
     try {
-      // Generate word list and grid
-      const wordList = generateWordList(category);
-      const grid = generateGrid(gridSize.width, gridSize.height, wordList);
-
+      // Get a random puzzle for the selected category and grid size
+      const puzzles = getPuzzlesByCategoryAndSize(category, gridSize);
+      const puzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+      
       const gameState: GameState = {
-        grid,
+        grid: puzzle.grid,
         foundWords: {},
         playerColors: {
           [user.id]: profile?.highlight_color || '#8B5CF6',
@@ -57,7 +62,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('games')
         .insert({
-          word_list: wordList,
+          word_list: puzzle.words,
           grid_size: gridSize,
           category,
           participants: [user.id],
@@ -203,92 +208,8 @@ export const useGame = () => {
   return context;
 };
 
-// Helper functions
-function generateWordList(category: string): string[] {
-  const wordLists = {
-    animals: ['CAT', 'DOG', 'BIRD', 'FISH', 'LION', 'BEAR', 'WOLF', 'DEER'],
-    colors: ['RED', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'PURPLE', 'PINK', 'BROWN'],
-    sports: ['SOCCER', 'TENNIS', 'GOLF', 'SWIM', 'RUN', 'JUMP', 'BIKE', 'SURF'],
-    food: ['PIZZA', 'BURGER', 'SALAD', 'SOUP', 'CAKE', 'BREAD', 'RICE', 'PASTA'],
-  };
-
-  return wordLists[category as keyof typeof wordLists] || wordLists.animals;
-}
-
-function generateGrid(width: number, height: number, words: string[]): string[][] {
-  const grid: string[][] = Array(height).fill(null).map(() => Array(width).fill(''));
-  
-  // Fill with random letters initially
-  for (let i = 0; i < height; i++) {
-    for (let j = 0; j < width; j++) {
-      grid[i][j] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    }
-  }
-
-  // Place words in grid
-  words.forEach(word => {
-    const placed = placeWordInGrid(grid, word, width, height);
-    if (!placed) {
-      console.warn(`Could not place word: ${word}`);
-    }
-  });
-
-  return grid;
-}
-
-function placeWordInGrid(grid: string[][], word: string, width: number, height: number): boolean {
-  const directions = [
-    { dx: 0, dy: 1 },   // horizontal
-    { dx: 1, dy: 0 },   // vertical
-    { dx: 1, dy: 1 },   // diagonal down-right
-    { dx: 1, dy: -1 },  // diagonal up-right
-  ];
-
-  for (let attempts = 0; attempts < 100; attempts++) {
-    const direction = directions[Math.floor(Math.random() * directions.length)];
-    const startRow = Math.floor(Math.random() * height);
-    const startCol = Math.floor(Math.random() * width);
-
-    if (canPlaceWord(grid, word, startRow, startCol, direction.dx, direction.dy, width, height)) {
-      // Place the word
-      for (let i = 0; i < word.length; i++) {
-        grid[startRow + i * direction.dx][startCol + i * direction.dy] = word[i];
-      }
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function canPlaceWord(
-  grid: string[][],
-  word: string,
-  startRow: number,
-  startCol: number,
-  dx: number,
-  dy: number,
-  width: number,
-  height: number
-): boolean {
-  // Check if word fits in grid
-  const endRow = startRow + (word.length - 1) * dx;
-  const endCol = startCol + (word.length - 1) * dy;
-
-  if (endRow < 0 || endRow >= height || endCol < 0 || endCol >= width) {
-    return false;
-  }
-
-  // Check if positions are available or match existing letters
-  for (let i = 0; i < word.length; i++) {
-    const row = startRow + i * dx;
-    const col = startCol + i * dy;
-    const currentLetter = grid[row][col];
-    
-    if (currentLetter !== '' && currentLetter !== word[i]) {
-      return false;
-    }
-  }
-
-  return true;
-}
+// Helper function to convert GridSize to width and height
+export const getGridDimensions = (gridSize: GridSize): { width: number; height: number } => {
+  const [width, height] = gridSize.split('x').map(Number);
+  return { width, height };
+};
