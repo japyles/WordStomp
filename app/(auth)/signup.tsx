@@ -19,8 +19,8 @@ export default function SignUp() {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters');
       return;
     }
 
@@ -29,15 +29,15 @@ export default function SignUp() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error.message ?? String(error));
     } else {
       Alert.alert(
-        'Check Your Email', 
-        'We sent you a confirmation link. Please check your email and click the link to verify your account.',
+        'Success',
+        'Account created! Please sign in.',
         [
           {
             text: 'OK',
-            onPress: () => router.push('/(auth)/signin'),
+            onPress: () => router.replace('/(auth)/signin'),
           },
         ]
       );

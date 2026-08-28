@@ -57,20 +57,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await convexSignIn('password', { email, password, flow: 'signIn' });
+      await convexSignIn('password', {
+        email: email.toLowerCase().trim(),
+        password,
+        flow: 'signIn',
+      });
       return { error: null };
     } catch (error) {
-      return { error };
+      return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      await convexSignIn('password', { email, password, flow: 'signUp', name: username });
-      await updateUser({ highlightColor: '#8B5CF6' });
+      await convexSignIn('password', {
+        email: email.toLowerCase().trim(),
+        password,
+        flow: 'signUp',
+        name: username.trim(),
+      });
       return { error: null };
     } catch (error) {
-      return { error };
+      return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };
 

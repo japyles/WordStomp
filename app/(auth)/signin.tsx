@@ -31,7 +31,7 @@ export default function SignIn() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error.message ?? String(error));
     } else {
       router.replace('/(tabs)');
     }

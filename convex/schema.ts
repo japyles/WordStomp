@@ -36,7 +36,8 @@ export default defineSchema({
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     highlightColor: v.optional(v.string()),
-  }).index("email", ["email"]),
+  }).index("email", ["email"])
+    .index("phone", ["phone"]),
   games: defineTable({
     wordList: v.array(v.string()),
     gridSize: v.string(),
