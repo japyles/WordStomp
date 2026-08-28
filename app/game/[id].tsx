@@ -106,7 +106,7 @@ export default function GameScreen() {
     savedScale.value = 1;
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
-  }, [currentGame?.id]);
+  }, [currentGame?._id]);
 
   useEffect(() => {
     // Check if all words are found
