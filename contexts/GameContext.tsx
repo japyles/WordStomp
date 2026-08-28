@@ -29,7 +29,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const currentGame = (useQuery(api.games.get, { gameId: currentGameId as any }) ?? null) as Game | null;
+  const gameQueryArgs = currentGameId ? { gameId: currentGameId as any } : undefined;
+  const gameResult = useQuery(api.games.get, gameQueryArgs);
+  const currentGame = (gameResult ?? null) as Game | null;
 
   const createGameMutation = useMutation(api.games.create);
   const joinGameMutation = useMutation(api.games.join);
