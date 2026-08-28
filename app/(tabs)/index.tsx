@@ -1,25 +1,52 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGame } from '@/contexts/GameContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Play, Users, Zap, Settings } from 'lucide-react-native';
+import { Category, GridSize } from '@/lib/wordSearchPuzzles';
 
 export default function Home() {
   const { profile, signOut } = useAuth();
+  const { createGame, loading } = useGame();
   const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedGridSize, setSelectedGridSize] = useState<GridSize | null>(null);
 
-  const gameCategories = [
+  const gameCategories: { id: Category; name: string; icon: string; color: string }[] = [
     { id: 'animals', name: 'Animals', icon: '🐾', color: '#10B981' },
     { id: 'colors', name: 'Colors', icon: '🎨', color: '#F59E0B' },
     { id: 'sports', name: 'Sports', icon: '⚽', color: '#EF4444' },
-    { id: 'food', name: 'Food', icon: '🍕', color: '#8B5CF6' },
+    { id: 'food', name: 'Food', icon: '🍕', color: '#7BD4CC' },
   ];
 
-  const gridSizes = [
-    { width: 10, height: 10, name: 'Small (10x10)' },
-    { width: 15, height: 15, name: 'Medium (15x15)' },
-    { width: 20, height: 20, name: 'Large (20x20)' },
+  const gridSizes: { size: GridSize; name: string }[] = [
+    { size: '10x10', name: 'Small (10x10)' },
+    { size: '15x15', name: 'Medium (15x15)' },
+    { size: '20x20', name: 'Large (20x20)' },
   ];
+
+  const handleQuickMatch = async () => {
+    if (!selectedCategory || !selectedGridSize) {
+      Alert.alert("Selection Required", "Please select both a category and grid size");
+      return;
+    }
+
+    try {
+      const gameId = await createGame(selectedCategory, selectedGridSize);
+      if (gameId) {
+        // Use the typed navigation
+        router.push({
+          pathname: '/game/[id]',
+          params: { id: gameId }
+        } as any); // Type assertion needed until Expo Router types are fully set up
+      }
+    } catch (error) {
+      console.error("Error creating game:", error);
+      Alert.alert("Error", "Failed to create game. Please try again.");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -27,7 +54,7 @@ export default function Home() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.username}>{profile?.username}!</Text>
+            <Text style={styles.username}>{profile?.name}!</Text>
           </View>
           <TouchableOpacity style={styles.settingsButton} onPress={signOut}>
             <Settings size={24} color="#64748B" />
@@ -35,9 +62,15 @@ export default function Home() {
         </View>
 
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.primaryAction}>
+          <TouchableOpacity 
+            style={[styles.primaryAction, loading && styles.disabledButton]}
+            onPress={handleQuickMatch}
+            disabled={loading}
+          >
             <Play size={24} color="#00281F" />
-            <Text style={styles.primaryActionText}>Quick Match</Text>
+            <Text style={styles.primaryActionText}>
+              {loading ? 'Creating Game...' : 'Quick Match'}
+            </Text>
           </TouchableOpacity>
 
           <View style={styles.secondaryActions}>
@@ -58,7 +91,14 @@ export default function Home() {
             {gameCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
-                style={[styles.categoryCard, { borderColor: category.color }]}
+                style={[
+                  styles.categoryCard, 
+                  { 
+                    borderColor: category.color,
+                    backgroundColor: selectedCategory === category.id ? `${category.color}33` : '#FFFFFF',
+                  }
+                ]}
+                onPress={() => setSelectedCategory(category.id)}
               >
                 <Text style={styles.categoryIcon}>{category.icon}</Text>
                 <Text style={styles.categoryName}>{category.name}</Text>
@@ -75,12 +115,13 @@ export default function Home() {
                 key={index}
                 style={[
                   styles.gridSizeCard,
-                  index === 1 && styles.gridSizeCardActive,
+                  selectedGridSize === size.size && styles.gridSizeCardActive,
                 ]}
+                onPress={() => setSelectedGridSize(size.size)}
               >
                 <Text style={[
                   styles.gridSizeText,
-                  index === 1 && styles.gridSizeTextActive,
+                  selectedGridSize === size.size && styles.gridSizeTextActive,
                 ]}>
                   {size.name}
                 </Text>
@@ -101,6 +142,9 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  disabledButton: {
+    opacity: 0.6,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

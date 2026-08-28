@@ -3,45 +3,16 @@ import { Link, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Platform } from 'react-native';
-import { supabase } from '@/lib/supabase';
 
 export default function Welcome() {
-  const { session, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (session && !loading) {
+    if (isAuthenticated && !loading) {
       router.replace('/(tabs)');
     }
-  }, [session, loading]);
-
-  useEffect(() => {
-    // Handle deep linking for email confirmation on mobile
-    if (Platform.OS !== 'web') {
-      const handleDeepLink = (url: string) => {
-        if (url.includes('access_token')) {
-          // Handle the auth callback
-          supabase.auth.getSession().then(({ data, error }) => {
-            if (data.session) {
-              router.replace('/(tabs)');
-            }
-          });
-        }
-      };
-
-      // Set up deep link listener for mobile
-      const subscription = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          router.replace('/(tabs)');
-        }
-      });
-
-      return () => {
-        subscription.data.subscription.unsubscribe();
-      };
-    }
-  }, []);
+  }, [isAuthenticated, loading]);
 
   return (
     <SafeAreaView style={styles.container}>

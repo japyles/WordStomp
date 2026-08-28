@@ -35,12 +35,12 @@ export default function Profile() {
           <View style={styles.avatarContainer}>
             <Text style={styles.avatar}>👤</Text>
           </View>
-          <Text style={styles.username}>{profile?.username}</Text>
+          <Text style={styles.username}>{profile?.name}</Text>
           <Text style={styles.email}>{profile?.email}</Text>
           
           <View style={styles.colorPicker}>
             <Text style={styles.colorLabel}>Highlight Color</Text>
-            <View style={[styles.colorSwatch, { backgroundColor: profile?.highlight_color }]} />
+            <View style={[styles.colorSwatch, { backgroundColor: profile?.highlightColor }]} />
           </View>
         </View>
 

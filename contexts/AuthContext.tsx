@@ -1,13 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-import { Database } from '@/types/database';
+import { useConvexAuth, useAuthActions } from '@convex-dev/auth/react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { UserProfile } from '@/types/database';
 
-type UserProfile = Database['public']['Tables']['users']['Row'];
+interface User {
+  id: string;
+  email?: string;
+  name?: string;
+  image?: string;
+}
 
 interface AuthContextType {
-  session: Session | null;
+  isAuthenticated: boolean;
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
@@ -20,124 +25,83 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
+  const { signIn: convexSignIn, signOut: convexSignOut } = useAuthActions();
+  const me = useQuery(api.users.me);
+  const updateUser = useMutation(api.users.update);
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      // Fetch user profile
-      fetchProfile();
-    } else {
+    if (isAuthLoading) {
+      setLoading(true);
+      return;
+    }
+    if (!isAuthenticated) {
       setProfile(null);
       setLoading(false);
+      return;
     }
-  }, [user]);
-
-  const fetchProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user!.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
+    if (me === undefined) {
+      setLoading(true);
+      return;
     }
+    setProfile(me as UserProfile);
+    setLoading(false);
+  }, [isAuthLoading, isAuthenticated, me]);
+
+  const user: User | null = profile
+    ? { id: profile._id, email: profile.email, name: profile.name, image: profile.image }
+    : null;
+
+  const buildFormData = (email: string, password: string, flow: string, name?: string) => {
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('flow', flow);
+    if (name) formData.append('name', name);
+    return formData;
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      await convexSignIn('password', buildFormData(email, password, 'signIn'));
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-            email,
-            // Add any additional user metadata here
-          },
-          emailRedirectTo: Platform.OS === 'web' 
-            ? `${window.location.origin}/(auth)/signin?confirmed=true`
-            : 'myapp://auth/signin?confirmed=true',
-        },
-      });
-
-      if (error) {
-        console.error('Signup error:', error);
-        return { error };
-      }
-      
-      // The user should receive a confirmation email
-      // The email might take a few moments to arrive
-      return { 
-        data: { 
-          ...data, 
-          message: data.user?.identities?.length === 0 
-            ? 'This email is already registered. Please sign in instead.'
-            : 'Please check your email to confirm your account.'
-        }, 
-        error: null 
-      };
+      await convexSignIn('password', buildFormData(email, password, 'signUp', username));
+      await updateUser({ highlightColor: '#8B5CF6' });
+      return { error: null };
     } catch (error) {
-      console.error('Signup error:', error);
-      return { 
-        error: error instanceof Error 
-          ? error 
-          : new Error('An unknown error occurred during signup') 
-      };
+      return { error };
     }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await convexSignOut();
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', user!.id);
-
-    if (!error) {
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
+    try {
+      await updateUser({
+        name: updates.name,
+        highlightColor: updates.highlightColor,
+        image: updates.image,
+      });
+      return { error: null };
+    } catch (error) {
+      return { error };
     }
-
-    return { error };
   };
 
   const value = {
-    session,
+    isAuthenticated,
     user,
     profile,
     loading,
