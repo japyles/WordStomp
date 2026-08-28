@@ -42,7 +42,7 @@ export default function GameScreen() {
   }, [currentGame]);
   
   // Gesture handlers
-  const pinchHandler = useAnimatedGestureHandler({
+  const pinchHandler = useAnimatedGestureHandler<any, { startScale: number }>({
     onStart: (_, ctx) => {
       ctx.startScale = savedScale.value;
     },
@@ -54,7 +54,7 @@ export default function GameScreen() {
     },
   });
   
-  const panHandler = useAnimatedGestureHandler({
+  const panHandler = useAnimatedGestureHandler<any, { startX: number; startY: number }>({
     onStart: (_, ctx) => {
       ctx.startX = savedTranslateX.value;
       ctx.startY = savedTranslateY.value;
@@ -81,7 +81,7 @@ export default function GameScreen() {
   });
   
   // Combined gesture handler for pinch and pan
-  const gestureHandler = useAnimatedGestureHandler({
+  const gestureHandler = useAnimatedGestureHandler<any, { startX: number; startY: number; startScale: number }>({
     onStart: (_, ctx) => {
       ctx.startX = savedTranslateX.value;
       ctx.startY = savedTranslateY.value;
