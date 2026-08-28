@@ -9,6 +9,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { convex } from '@/lib/convex';
+import { secureStorage } from '@/lib/authStorage';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -34,7 +35,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ConvexAuthProvider client={convex}>
+    <ConvexAuthProvider client={convex} storage={secureStorage}>
       <AuthProvider>
         <GameProvider>
           <Stack screenOptions={{ headerShown: false }}>

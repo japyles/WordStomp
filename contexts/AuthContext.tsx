@@ -55,18 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ? { id: profile._id, email: profile.email, name: profile.name, image: profile.image }
     : null;
 
-  const buildFormData = (email: string, password: string, flow: string, name?: string) => {
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('flow', flow);
-    if (name) formData.append('name', name);
-    return formData;
-  };
-
   const signIn = async (email: string, password: string) => {
     try {
-      await convexSignIn('password', buildFormData(email, password, 'signIn'));
+      await convexSignIn('password', { email, password, flow: 'signIn' });
       return { error: null };
     } catch (error) {
       return { error };
@@ -75,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      await convexSignIn('password', buildFormData(email, password, 'signUp', username));
+      await convexSignIn('password', { email, password, flow: 'signUp', name: username });
       await updateUser({ highlightColor: '#8B5CF6' });
       return { error: null };
     } catch (error) {
