@@ -1,13 +1,16 @@
-import * as SecureStore from 'expo-secure-store';
+// In-memory token storage for testing.
+// For production, replace this with expo-secure-store or another persistent storage
+// after building a dev client with the correct native module version.
+const memoryStore: Record<string, string> = {};
 
-export const secureStorage = {
+export const tokenStorage = {
   getItem: async (key: string): Promise<string | null> => {
-    return await SecureStore.getItemAsync(key);
+    return memoryStore[key] ?? null;
   },
   setItem: async (key: string, value: string): Promise<void> => {
-    await SecureStore.setItemAsync(key, value);
+    memoryStore[key] = value;
   },
   removeItem: async (key: string): Promise<void> => {
-    await SecureStore.deleteItemAsync(key);
+    delete memoryStore[key];
   },
 };
