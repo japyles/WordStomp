@@ -1,11 +1,12 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const me = query({
   args: {},
   handler: async (ctx) => {
-    const userId = ctx.userId;
-    if (!userId) return null;
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     const user = await ctx.db.get(userId);
     return user ?? null;
   },
@@ -18,8 +19,8 @@ export const update = mutation({
     image: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = ctx.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not authenticated");
 
     const updates: Record<string, unknown> = {};
     if (args.name !== undefined) updates.name = args.name;

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 const gameStateValidator = v.object({
   grid: v.array(v.array(v.string())),
@@ -52,8 +53,8 @@ export const join = mutation({
     color: v.string(),
   },
   handler: async (ctx, { gameId, color }) => {
-    const userId = ctx.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not authenticated");
 
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
@@ -97,8 +98,8 @@ export const claimWord = mutation({
     color: v.string(),
   },
   handler: async (ctx, { gameId, word, positions, color }) => {
-    const userId = ctx.userId;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not authenticated");
 
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
