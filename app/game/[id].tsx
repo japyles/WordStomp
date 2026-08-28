@@ -351,9 +351,4 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#00281F',
   },
-  word: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#334155',
-  },
 });
