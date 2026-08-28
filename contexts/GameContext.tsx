@@ -29,7 +29,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const gameQueryArgs = currentGameId ? { gameId: currentGameId as any } : undefined;
+  const gameQueryArgs = currentGameId ? { gameId: currentGameId as any } : "skip";
   const gameResult = useQuery(api.games.get, gameQueryArgs);
   const currentGame = (gameResult ?? null) as Game | null;
 
