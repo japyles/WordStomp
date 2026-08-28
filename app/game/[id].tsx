@@ -4,25 +4,21 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useGame } from '@/contexts/GameContext';
 import { ArrowLeft } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
-  useAnimatedGestureHandler,
-  runOnJS,
 } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const AnimatedView = Animated.createAnimatedComponent(View);
 
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { currentGame, findWord, saveGame } = useGame();
   const [showConfetti, setShowConfetti] = useState(false);
   const [isGameComplete, setIsGameComplete] = useState(false);
-  
+
   // Animation values
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
@@ -30,45 +26,67 @@ export default function GameScreen() {
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
-  
+  const startScale = useSharedValue(1);
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+
   // Calculate cell size based on grid size
   const getCellSize = useCallback(() => {
     if (!currentGame) return 28;
     const gridSize = parseInt(currentGame.gridSize.split('x')[0], 10);
-    
+
     if (gridSize >= 20) return 16;
     if (gridSize >= 15) return 20;
     return 28;
   }, [currentGame]);
-  
+
   // Gesture handlers
-  const pinchHandler = useAnimatedGestureHandler<any, { startScale: number }>({
-    onStart: (_, ctx) => {
-      ctx.startScale = savedScale.value;
-    },
-    onActive: (event, ctx) => {
-      scale.value = Math.max(0.5, Math.min(ctx.startScale * event.scale, 3));
-    },
-    onEnd: () => {
+  const pinch = Gesture.Pinch()
+    .onBegin(() => {
+      'worklet';
+      startScale.value = savedScale.value;
+      startX.value = savedTranslateX.value;
+      startY.value = savedTranslateY.value;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      const newScale = Math.max(0.5, Math.min(startScale.value * event.scale, 3));
+      scale.value = newScale;
+
+      const focalX = event.focalX - SCREEN_WIDTH / 2;
+      const focalY = event.focalY - SCREEN_HEIGHT / 2;
+      translateX.value = startX.value + (focalX * (1 - newScale / startScale.value));
+      translateY.value = startY.value + (focalY * (1 - newScale / startScale.value));
+    })
+    .onEnd(() => {
+      'worklet';
       savedScale.value = scale.value;
-    },
-  });
-  
-  const panHandler = useAnimatedGestureHandler<any, { startX: number; startY: number }>({
-    onStart: (_, ctx) => {
-      ctx.startX = savedTranslateX.value;
-      ctx.startY = savedTranslateY.value;
-    },
-    onActive: (event, ctx) => {
-      translateX.value = ctx.startX + event.translationX;
-      translateY.value = ctx.startY + event.translationY;
-    },
-    onEnd: () => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
-    },
-  });
-  
+    });
+
+  const pan = Gesture.Pan()
+    .maxPointers(1)
+    .onBegin(() => {
+      'worklet';
+      startX.value = savedTranslateX.value;
+      startY.value = savedTranslateY.value;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      if (scale.value > 1) {
+        translateX.value = startX.value + event.translationX;
+        translateY.value = startY.value + event.translationY;
+      }
+    })
+    .onEnd(() => {
+      'worklet';
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
+
+  const composed = Gesture.Simultaneous(pinch, pan);
+
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -79,40 +97,7 @@ export default function GameScreen() {
       ],
     };
   });
-  
-  // Combined gesture handler for pinch and pan
-  const gestureHandler = useAnimatedGestureHandler<any, { startX: number; startY: number; startScale: number }>({
-    onStart: (_, ctx) => {
-      ctx.startX = savedTranslateX.value;
-      ctx.startY = savedTranslateY.value;
-      ctx.startScale = savedScale.value;
-    },
-    onActive: (event, ctx) => {
-      if (event.numberOfPointers === 2) {
-        // Pinch to zoom
-        const newScale = Math.max(0.5, Math.min(ctx.startScale * event.scale, 3));
-        scale.value = newScale;
-        
-        // Calculate focal point for zooming
-        const focalX = event.focalX - SCREEN_WIDTH / 2;
-        const focalY = event.focalY - SCREEN_HEIGHT / 2;
-        
-        // Adjust translation to zoom toward the focal point
-        translateX.value = ctx.startX + (focalX * (1 - newScale / ctx.startScale));
-        translateY.value = ctx.startY + (focalY * (1 - newScale / ctx.startScale));
-      } else if (scale.value > 1) {
-        // Pan only when zoomed in
-        translateX.value = ctx.startX + event.translationX;
-        translateY.value = ctx.startY + event.translationY;
-      }
-    },
-    onEnd: () => {
-      savedScale.value = scale.value;
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-    },
-  });
-  
+
   // Reset zoom and pan when game changes
   useEffect(() => {
     scale.value = withTiming(1);
@@ -126,10 +111,10 @@ export default function GameScreen() {
   useEffect(() => {
     // Check if all words are found
     if (currentGame) {
-      const allWordsFound = currentGame.wordList.every(word => 
+      const allWordsFound = currentGame.wordList.every(word =>
         currentGame.gameState.foundWords[word]
       );
-      
+
       if (allWordsFound && !isGameComplete) {
         setIsGameComplete(true);
         setShowConfetti(true);
@@ -142,7 +127,7 @@ export default function GameScreen() {
 
   const handleBackPress = () => {
     if (!currentGame) return;
-    
+
     Alert.alert(
       'Save Game?',
       'Do you want to save your progress before leaving?',
@@ -199,7 +184,7 @@ export default function GameScreen() {
           <Text style={styles.categoryText}>{currentGame.category}</Text>
           <Text style={styles.gridSizeText}>{currentGame.gridSize} Grid</Text>
         </View>
-        
+
         {showConfetti && (
           <ConfettiCannon
             count={200}
@@ -207,33 +192,26 @@ export default function GameScreen() {
             fadeOut
           />
         )}
-        
+
         {/* Zoomable and pannable game board */}
         <View style={styles.gameBoardContainer}>
-          <Animated.View 
-            style={[styles.gameBoard, animatedStyle]}
-            onStartShouldSetResponder={() => true}
-            onResponderGrant={(e) => {
-              // Handle touch start if needed
-            }}
-            onResponderMove={(e) => {
-              // Handle touch move if needed
-            }}
-          >
-            <View style={styles.grid}>
-              {currentGame.gameState.grid.map((row, rowIndex) => (
-                <View key={`row-${rowIndex}`} style={styles.row}>
-                  {row.map((cell, colIndex) => (
-                    <View key={`${rowIndex}-${colIndex}`} style={styles.cell}>
-                      <Text style={styles.cellText}>{cell || ''}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </View>
-          </Animated.View>
+          <GestureDetector gesture={composed}>
+            <Animated.View style={[styles.gameBoard, animatedStyle]}>
+              <View style={styles.grid}>
+                {currentGame.gameState.grid.map((row, rowIndex) => (
+                  <View key={`row-${rowIndex}`} style={styles.row}>
+                    {row.map((cell, colIndex) => (
+                      <View key={`${rowIndex}-${colIndex}`} style={styles.cell}>
+                        <Text style={styles.cellText}>{cell || ''}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </Animated.View>
+          </GestureDetector>
         </View>
-        
+
         {/* Word list */}
         <View style={styles.wordList}>
           <Text style={styles.wordListTitle}>Words to Find:</Text>
@@ -241,8 +219,8 @@ export default function GameScreen() {
             {currentGame.wordList.map((word, index) => {
               const isFound = currentGame.gameState.foundWords[word];
               return (
-                <Text 
-                  key={index} 
+                <Text
+                  key={index}
                   style={[
                     styles.word,
                     isFound && styles.foundWord
