@@ -313,6 +313,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  cellText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#1E293B',
+  },
   wordList: {
     padding: 16,
     backgroundColor: '#FFFFFF',
