@@ -21,6 +21,7 @@ export default function GameScreen() {
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [selectedStart, setSelectedStart] = useState<{ row: number; col: number } | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<{ row: number; col: number } | null>(null);
+  const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
 
   // Animation values
   const scale = useSharedValue(1);
@@ -39,15 +40,14 @@ export default function GameScreen() {
   const lastSelectedRow = useSharedValue(-1);
   const lastSelectedCol = useSharedValue(-1);
 
-  // Calculate cell size based on grid size
+  // Calculate cell size so the grid fits inside the board container
   const getCellSize = useCallback(() => {
-    if (!currentGame) return 28;
-    const gridSize = parseInt(currentGame.gridSize.split('x')[0], 10);
-
-    if (gridSize >= 20) return 16;
-    if (gridSize >= 15) return 20;
-    return 28;
-  }, [currentGame]);
+    if (!currentGame || boardSize.width === 0 || boardSize.height === 0) return 28;
+    const [gridW, gridH] = currentGame.gridSize.split('x').map(Number);
+    const maxCells = Math.max(gridW, gridH);
+    const minSide = Math.min(boardSize.width, boardSize.height) - 32;
+    return Math.max(14, Math.min(28, Math.floor(minSide / maxCells)));
+  }, [currentGame, boardSize]);
 
   const cellSize = getCellSize();
   const [gridWidth = 0, gridHeight = 0] = currentGame
@@ -258,7 +258,7 @@ export default function GameScreen() {
     };
   });
 
-  // Reset zoom and pan when game changes
+  // Reset zoom and pan when game or board size changes
   useEffect(() => {
     if (currentGame) {
       const size = getCellSize();
@@ -277,7 +277,7 @@ export default function GameScreen() {
     selectionStart.value = null;
     lastSelectedRow.value = -1;
     lastSelectedCol.value = -1;
-  }, [currentGame?._id]);
+  }, [currentGame?._id, boardSize.width, boardSize.height]);
 
   useEffect(() => {
     // Check if all words are found
@@ -360,7 +360,13 @@ export default function GameScreen() {
         )}
 
         {/* Zoomable and pannable game board */}
-        <View style={styles.gameBoardContainer}>
+        <View
+          style={styles.gameBoardContainer}
+          onLayout={(event) => {
+            const { width, height } = event.nativeEvent.layout;
+            setBoardSize({ width, height });
+          }}
+        >
           <GestureDetector gesture={composed}>
             <Animated.View style={[styles.gameBoard, animatedStyle]}>
               <View
@@ -515,11 +521,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    maxHeight: 200,
+    maxHeight: 150,
+    alignItems: 'center',
   },
   wordsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     marginTop: 8,
   },
   word: {
@@ -542,5 +550,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 10,
     color: '#00281F',
+    textAlign: 'center',
   },
 });
