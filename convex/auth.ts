@@ -6,8 +6,8 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password<DataModel>({
       profile: (params) => ({
-        email: (params.email as string | undefined) ?? "",
-        name: params.name as string | undefined,
+        email: (params.email as string | undefined)?.toLowerCase().trim() ?? "",
+        name: (params.name as string | undefined)?.trim(),
       }),
     }),
   ],

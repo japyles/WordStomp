@@ -58,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const getAuthErrorMessage = (error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
+    if (lower.includes('invalidaccountid')) {
+      return 'No account found with this email. Please sign up first.';
+    }
     if (lower.includes('invalid') || lower.includes('credentials')) {
       return 'Invalid email or password. Please try again.';
     }
