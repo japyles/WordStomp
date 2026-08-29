@@ -55,6 +55,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ? { id: profile._id, email: profile.email, name: profile.name, image: profile.image }
     : null;
 
+  const getAuthErrorMessage = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+    if (lower.includes('invalid') || lower.includes('credentials')) {
+      return 'Invalid email or password. Please try again.';
+    }
+    if (lower.includes('not found') || lower.includes('no user')) {
+      return 'No account found with this email.';
+    }
+    return message;
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       await convexSignIn('password', {
@@ -64,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error: null };
     } catch (error) {
-      return { error: error instanceof Error ? error : new Error(String(error)) };
+      return { error: new Error(getAuthErrorMessage(error)) };
     }
   };
 

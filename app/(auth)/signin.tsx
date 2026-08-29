@@ -10,6 +10,7 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const { signIn } = useAuth();
   const router = useRouter();
   const { confirmed } = useLocalSearchParams();
@@ -22,16 +23,17 @@ export default function SignIn() {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setError('Please fill in all fields');
       return;
     }
 
+    setError('');
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error: signInError } = await signIn(email, password);
     setLoading(false);
 
-    if (error) {
-      Alert.alert('Error', error.message ?? String(error));
+    if (signInError) {
+      setError(signInError.message ?? 'An error occurred');
     } else {
       router.replace('/(tabs)');
     }
@@ -79,6 +81,8 @@ export default function SignIn() {
             {loading ? 'Signing In...' : 'Sign In'}
           </Text>
         </TouchableOpacity>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
@@ -143,6 +147,13 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  error: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: 16,
   },
   buttonText: {
     color: '#FFFFFF',
