@@ -45,7 +45,7 @@ export default function GameScreen() {
     if (!currentGame || boardSize.width === 0 || boardSize.height === 0) return 28;
     const [gridW, gridH] = currentGame.gridSize.split('x').map(Number);
     const maxCells = Math.max(gridW, gridH);
-    const minSide = Math.min(boardSize.width, boardSize.height) - 32;
+    const minSide = Math.min(boardSize.width, boardSize.height) - 8;
     return Math.max(14, Math.min(28, Math.floor(minSide / maxCells)));
   }, [currentGame, boardSize]);
 
@@ -447,11 +447,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   gameBoardContainer: {
-    flex: 1,
+    width: '100%',
+    maxWidth: SCREEN_WIDTH - 32,
+    aspectRatio: 1,
+    alignSelf: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    margin: 16,
-    marginBottom: 8,
+    marginVertical: 8,
     overflow: 'hidden',
     elevation: 2,
     shadowColor: '#000',
@@ -460,10 +462,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   gameBoard: {
-    minHeight: '100%',
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 4,
     backgroundColor: '#FFFFFF',
   },
   header: {
