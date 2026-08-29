@@ -9,6 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  runOnJS,
 } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -18,6 +19,8 @@ export default function GameScreen() {
   const { currentGame, findWord, saveGame } = useGame();
   const [showConfetti, setShowConfetti] = useState(false);
   const [isGameComplete, setIsGameComplete] = useState(false);
+  const [selectedStart, setSelectedStart] = useState<{ row: number; col: number } | null>(null);
+  const [selectedEnd, setSelectedEnd] = useState<{ row: number; col: number } | null>(null);
 
   // Animation values
   const scale = useSharedValue(1);
@@ -29,6 +32,7 @@ export default function GameScreen() {
   const startScale = useSharedValue(1);
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
+  const gridOrigin = useSharedValue({ x: 0, y: 0 });
 
   // Calculate cell size based on grid size
   const getCellSize = useCallback(() => {
@@ -40,7 +44,108 @@ export default function GameScreen() {
     return 28;
   }, [currentGame]);
 
-  // Gesture handlers
+  const cellSize = getCellSize();
+  const [gridWidth = 0, gridHeight = 0] = currentGame
+    ? currentGame.gridSize.split('x').map(Number)
+    : [0, 0];
+
+  const selectedCells = new Set<string>();
+  if (selectedStart && selectedEnd) {
+    const dRow = selectedEnd.row - selectedStart.row;
+    const dCol = selectedEnd.col - selectedStart.col;
+    const steps = Math.max(Math.abs(dRow), Math.abs(dCol));
+    if (steps > 0) {
+      const rowStep = dRow / steps;
+      const colStep = dCol / steps;
+      if (Number.isInteger(rowStep) && Number.isInteger(colStep)) {
+        for (let i = 0; i <= steps; i++) {
+          selectedCells.add(`${selectedStart.row + i * rowStep}-${selectedStart.col + i * colStep}`);
+        }
+      }
+    }
+  } else if (selectedStart) {
+    selectedCells.add(`${selectedStart.row}-${selectedStart.col}`);
+  }
+
+  const foundColors = new Map<string, string>();
+  if (currentGame) {
+    Object.values(currentGame.gameState.foundWords).forEach((data) => {
+      data.positions.forEach((pos) => {
+        const key = `${pos.row}-${pos.col}`;
+        if (!foundColors.has(key)) {
+          foundColors.set(key, data.color);
+        }
+      });
+    });
+  }
+
+  const handleTap = useCallback(
+    async (x: number, y: number) => {
+      if (!currentGame) return;
+
+      const origin = gridOrigin.value;
+      const size = getCellSize();
+      const row = Math.floor((y - origin.y) / size);
+      const col = Math.floor((x - origin.x) / size);
+
+      if (row < 0 || row >= gridHeight || col < 0 || col >= gridWidth) return;
+
+      if (!selectedStart) {
+        setSelectedStart({ row, col });
+      } else if (!selectedEnd) {
+        if (row === selectedStart.row && col === selectedStart.col) {
+          setSelectedStart(null);
+          return;
+        }
+
+        const dRow = row - selectedStart.row;
+        const dCol = col - selectedStart.col;
+        const steps = Math.max(Math.abs(dRow), Math.abs(dCol));
+        if (steps === 0) {
+          setSelectedStart(null);
+          return;
+        }
+
+        const rowStep = dRow / steps;
+        const colStep = dCol / steps;
+        if (!Number.isInteger(rowStep) || !Number.isInteger(colStep)) {
+          setSelectedStart(null);
+          setSelectedEnd(null);
+          return;
+        }
+
+        const positions: { row: number; col: number }[] = [];
+        let selectedWord = '';
+        for (let i = 0; i <= steps; i++) {
+          const r = selectedStart.row + i * rowStep;
+          const c = selectedStart.col + i * colStep;
+          positions.push({ row: r, col: c });
+          selectedWord += currentGame.gameState.grid[r][c];
+        }
+
+        const reversed = selectedWord.split('').reverse().join('');
+        const match = currentGame.wordList.find((w) => w === selectedWord || w === reversed);
+
+        if (match && !currentGame.gameState.foundWords[match]) {
+          const matchPositions = match === reversed ? positions.slice().reverse() : positions;
+          await findWord(match, matchPositions);
+        }
+
+        setSelectedStart(null);
+        setSelectedEnd(null);
+      } else {
+        setSelectedStart({ row, col });
+        setSelectedEnd(null);
+      }
+    },
+    [currentGame, findWord, getCellSize, gridOrigin, gridHeight, gridWidth, selectedStart, selectedEnd]
+  );
+
+  const tap = Gesture.Tap().onEnd((event) => {
+    'worklet';
+    runOnJS(handleTap)(event.x, event.y);
+  });
+
   const pinch = Gesture.Pinch()
     .onBegin(() => {
       'worklet';
@@ -85,7 +190,7 @@ export default function GameScreen() {
       savedTranslateY.value = translateY.value;
     });
 
-  const composed = Gesture.Simultaneous(pinch, pan);
+  const composed = Gesture.Simultaneous(Gesture.Exclusive(tap, pan), pinch);
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
@@ -106,12 +211,14 @@ export default function GameScreen() {
     savedScale.value = 1;
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
+    setSelectedStart(null);
+    setSelectedEnd(null);
   }, [currentGame?._id]);
 
   useEffect(() => {
     // Check if all words are found
     if (currentGame) {
-      const allWordsFound = currentGame.wordList.every(word =>
+      const allWordsFound = currentGame.wordList.every((word) =>
         currentGame.gameState.foundWords[word]
       );
 
@@ -156,11 +263,6 @@ export default function GameScreen() {
     );
   };
 
-  const handleWordFound = (word: string, positions: { row: number; col: number }[]) => {
-    if (!currentGame) return;
-    findWord(word, positions);
-  };
-
   if (!currentGame) {
     return (
       <View style={styles.loadingContainer}>
@@ -197,14 +299,40 @@ export default function GameScreen() {
         <View style={styles.gameBoardContainer}>
           <GestureDetector gesture={composed}>
             <Animated.View style={[styles.gameBoard, animatedStyle]}>
-              <View style={styles.grid}>
+              <View
+                style={styles.grid}
+                onLayout={(event) => {
+                  const { x, y } = event.nativeEvent.layout;
+                  gridOrigin.value = { x, y };
+                }}
+              >
                 {currentGame.gameState.grid.map((row, rowIndex) => (
                   <View key={`row-${rowIndex}`} style={styles.row}>
-                    {row.map((cell, colIndex) => (
-                      <View key={`${rowIndex}-${colIndex}`} style={styles.cell}>
-                        <Text style={styles.cellText}>{cell || ''}</Text>
-                      </View>
-                    ))}
+                    {row.map((cell, colIndex) => {
+                      const key = `${rowIndex}-${colIndex}`;
+                      const isSelected = selectedCells.has(key);
+                      const foundColor = foundColors.get(key);
+                      return (
+                        <View
+                          key={`cell-${rowIndex}-${colIndex}`}
+                          style={[
+                            styles.cell,
+                            { width: cellSize, height: cellSize },
+                            foundColor && { backgroundColor: foundColor },
+                            isSelected && { backgroundColor: 'rgba(139,92,246,0.3)' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.cellText,
+                              { fontSize: Math.max(10, Math.floor(cellSize * 0.5)) },
+                            ]}
+                          >
+                            {cell || ''}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
                 ))}
               </View>
