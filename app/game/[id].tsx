@@ -279,8 +279,11 @@ export default function GameScreen() {
       if (allWordsFound && !isGameComplete) {
         setIsGameComplete(true);
         setShowConfetti(true);
-        // Auto-hide confetti after 5 seconds
-        const timer = setTimeout(() => setShowConfetti(false), 5000);
+        // Let confetti settle, then go home
+        const timer = setTimeout(() => {
+          setShowConfetti(false);
+          router.replace('/(tabs)');
+        }, 6000);
         return () => clearTimeout(timer);
       }
     }
@@ -340,14 +343,6 @@ export default function GameScreen() {
           <Text style={styles.categoryText}>{currentGame.category}</Text>
           <Text style={styles.gridSizeText}>{currentGame.gridSize} Grid</Text>
         </View>
-
-        {showConfetti && (
-          <ConfettiCannon
-            count={200}
-            origin={{ x: -10, y: 0 }}
-            fadeOut
-          />
-        )}
 
         {/* Zoomable and pannable game board */}
         <View
@@ -449,6 +444,15 @@ export default function GameScreen() {
             })}
           </View>
         </View>
+
+        {showConfetti && (
+          <ConfettiCannon
+            count={200}
+            origin={{ x: -10, y: 0 }}
+            fadeOut
+            style={styles.confetti}
+          />
+        )}
       </View>
     </GestureHandlerRootView>
   );
@@ -458,6 +462,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  confetti: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    pointerEvents: 'none',
   },
   loadingContainer: {
     flex: 1,
