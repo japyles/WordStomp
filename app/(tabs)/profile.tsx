@@ -1,10 +1,30 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { Settings, Trophy, Target, Clock, Award } from 'lucide-react-native';
+import { ColorPicker, useColor } from 'react-native-color-picker-palette/lite';
+
+const primaryColors = [
+  '#EF4444',
+  '#F97316',
+  '#F59E0B',
+  '#10B981',
+  '#3B82F6',
+  '#8B5CF6',
+  '#EC4899',
+  '#64748B',
+];
+
+function toHex(c: any): string {
+  if (typeof c === 'string') return c;
+  return c?.hex ?? '#8B5CF6';
+}
 
 export default function Profile() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, updateProfile } = useAuth();
+  const [color, setColor] = useColor(profile?.highlightColor ?? '#8B5CF6');
+  const [saving, setSaving] = useState(false);
 
   const stats = [
     { label: 'Games Won', value: '48', icon: Trophy, color: '#10B981' },
@@ -20,6 +40,28 @@ export default function Profile() {
     { id: 4, name: 'Streak Legend', description: 'Win 10 games in a row', unlocked: false, icon: '🔥' },
     { id: 5, name: 'Tournament Champion', description: 'Win a tournament', unlocked: false, icon: '👑' },
   ];
+
+  const saveColor = async (hex: string) => {
+    if (hex === profile?.highlightColor) return;
+    setSaving(true);
+    await updateProfile({ highlightColor: hex });
+    setSaving(false);
+  };
+
+  const handleColorChange = (c: any) => {
+    setColor(toHex(c));
+  };
+
+  const handleColorComplete = async (c: any) => {
+    const hex = toHex(c);
+    setColor(hex);
+    await saveColor(hex);
+  };
+
+  const selectPrimary = async (hex: string) => {
+    setColor(hex);
+    await saveColor(hex);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -37,10 +79,38 @@ export default function Profile() {
           </View>
           <Text style={styles.username}>{profile?.name}</Text>
           <Text style={styles.email}>{profile?.email}</Text>
-          
-          <View style={styles.colorPicker}>
+
+          <View style={styles.colorSection}>
             <Text style={styles.colorLabel}>Highlight Color</Text>
-            <View style={[styles.colorSwatch, { backgroundColor: profile?.highlightColor }]} />
+
+            <View style={styles.pickerContainer}>
+              <ColorPicker
+                color={color}
+                onChange={handleColorChange}
+                onChangeComplete={handleColorComplete}
+                style={styles.picker}
+              />
+            </View>
+
+            <View style={styles.primaryRow}>
+              {primaryColors.map((hex) => (
+                <TouchableOpacity
+                  key={hex}
+                  style={[
+                    styles.primaryChip,
+                    { backgroundColor: hex },
+                    color === hex && styles.primaryChipSelected,
+                  ]}
+                  onPress={() => selectPrimary(hex)}
+                />
+              ))}
+            </View>
+
+            <View style={styles.swatchRow}>
+              <View style={[styles.colorSwatch, { backgroundColor: color }]} />
+              <Text style={styles.colorValue}>{color}</Text>
+              {saving && <ActivityIndicator size="small" color="#8B5CF6" style={styles.saving} />}
+            </View>
           </View>
         </View>
 
@@ -155,22 +225,65 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 16,
   },
-  colorPicker: {
-    flexDirection: 'row',
+  colorSection: {
+    width: '100%',
     alignItems: 'center',
-    gap: 8,
   },
   colorLabel: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  pickerContainer: {
+    width: '100%',
+    height: 260,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
+  },
+  picker: {
+    width: '100%',
+    height: '100%',
+  },
+  primaryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  primaryChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  primaryChipSelected: {
+    borderColor: '#1E293B',
+  },
+  swatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  colorSwatch: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+  },
+  colorValue: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
     color: '#64748B',
+    textTransform: 'uppercase',
   },
-  colorSwatch: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
+  saving: {
+    marginLeft: 4,
   },
   statsSection: {
     padding: 20,
