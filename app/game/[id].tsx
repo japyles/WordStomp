@@ -181,26 +181,14 @@ export default function GameScreen() {
 
   const pan = Gesture.Pan()
     .maxPointers(1)
-    .onBegin((event) => {
+    .onBegin(() => {
       'worklet';
-      if (scale.value > 1) {
-        startX.value = savedTranslateX.value;
-        startY.value = savedTranslateY.value;
-      } else {
-        const origin = gridOrigin.value;
-        const col = Math.floor((event.x - origin.x) / cellSizeSV.value);
-        const row = Math.floor((event.y - origin.y) / cellSizeSV.value);
-        if (
-          row >= 0 &&
-          row < gridSizeSV.value.rows &&
-          col >= 0 &&
-          col < gridSizeSV.value.cols
-        ) {
-          selectionStart.value = { row, col };
-          lastSelectedRow.value = row;
-          lastSelectedCol.value = col;
-          runOnJS(setSelectedStart)({ row, col });
-        }
+      startX.value = savedTranslateX.value;
+      startY.value = savedTranslateY.value;
+      if (scale.value <= 1) {
+        selectionStart.value = null;
+        lastSelectedRow.value = -1;
+        lastSelectedCol.value = -1;
       }
     })
     .onUpdate((event) => {
@@ -210,8 +198,29 @@ export default function GameScreen() {
         translateY.value = startY.value + event.translationY;
       } else {
         const origin = gridOrigin.value;
-        const col = Math.floor((event.x - origin.x) / cellSizeSV.value);
-        const row = Math.floor((event.y - origin.y) / cellSizeSV.value);
+        const size = cellSizeSV.value;
+
+        const startXPos = event.x - event.translationX;
+        const startYPos = event.y - event.translationY;
+
+        if (selectionStart.value === null) {
+          const startCol = Math.floor((startXPos - origin.x) / size);
+          const startRow = Math.floor((startYPos - origin.y) / size);
+          if (
+            startRow >= 0 &&
+            startRow < gridSizeSV.value.rows &&
+            startCol >= 0 &&
+            startCol < gridSizeSV.value.cols
+          ) {
+            selectionStart.value = { row: startRow, col: startCol };
+            lastSelectedRow.value = startRow;
+            lastSelectedCol.value = startCol;
+            runOnJS(setSelectedStart)({ row: startRow, col: startCol });
+          }
+        }
+
+        const col = Math.floor((event.x - origin.x) / size);
+        const row = Math.floor((event.y - origin.y) / size);
         if (
           row >= 0 &&
           row < gridSizeSV.value.rows &&
