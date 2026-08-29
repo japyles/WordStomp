@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { Settings, Trophy, Target, Clock, Award } from 'lucide-react-native';
-import { ColorPicker, useColor } from 'react-native-color-picker-palette/lite';
+import { ColorPicker } from 'react-native-color-picker-palette/lite';
+import { ColorService } from 'react-native-color-picker-palette';
 
 const primaryColors = [
   '#EF4444',
@@ -16,16 +17,13 @@ const primaryColors = [
   '#64748B',
 ];
 
-function toHex(c: any): string {
-  if (typeof c === 'string') return c;
-  return c?.hex ?? '#8B5CF6';
-}
-
 export default function Profile() {
   const { profile, signOut, updateProfile } = useAuth();
-  const [color, setColor] = useColor(profile?.highlightColor ?? '#8B5CF6');
+  const [color, setColor] = useState<any>(
+    ColorService.fromHex(profile?.highlightColor ?? '#8B5CF6')
+  );
   const [saving, setSaving] = useState(false);
-  const currentColor = toHex(color);
+  const currentColor = color?.hex ?? '#8B5CF6';
 
   const stats = [
     { label: 'Games Won', value: '48', icon: Trophy, color: '#10B981' },
@@ -54,13 +52,12 @@ export default function Profile() {
   };
 
   const handleColorComplete = async (c: any) => {
-    const hex = toHex(c);
     setColor(c);
-    await saveColor(hex);
+    await saveColor(c?.hex ?? '#8B5CF6');
   };
 
   const selectPrimary = async (hex: string) => {
-    setColor(hex);
+    setColor(ColorService.fromHex(hex));
     await saveColor(hex);
   };
 
