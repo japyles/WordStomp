@@ -25,6 +25,7 @@ export default function Profile() {
   const { profile, signOut, updateProfile } = useAuth();
   const [color, setColor] = useColor(profile?.highlightColor ?? '#8B5CF6');
   const [saving, setSaving] = useState(false);
+  const currentColor = toHex(color);
 
   const stats = [
     { label: 'Games Won', value: '48', icon: Trophy, color: '#10B981' },
@@ -49,12 +50,12 @@ export default function Profile() {
   };
 
   const handleColorChange = (c: any) => {
-    setColor(toHex(c));
+    setColor(c);
   };
 
   const handleColorComplete = async (c: any) => {
     const hex = toHex(c);
-    setColor(hex);
+    setColor(c);
     await saveColor(hex);
   };
 
@@ -99,7 +100,7 @@ export default function Profile() {
                   style={[
                     styles.primaryChip,
                     { backgroundColor: hex },
-                    color === hex && styles.primaryChipSelected,
+                    currentColor === hex && styles.primaryChipSelected,
                   ]}
                   onPress={() => selectPrimary(hex)}
                 />
@@ -107,8 +108,8 @@ export default function Profile() {
             </View>
 
             <View style={styles.swatchRow}>
-              <View style={[styles.colorSwatch, { backgroundColor: color }]} />
-              <Text style={styles.colorValue}>{color}</Text>
+              <View style={[styles.colorSwatch, { backgroundColor: currentColor }]} />
+              <Text style={styles.colorValue}>{currentColor}</Text>
               {saving && <ActivityIndicator size="small" color="#8B5CF6" style={styles.saving} />}
             </View>
           </View>
