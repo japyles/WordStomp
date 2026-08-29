@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,12 +19,11 @@ const primaryColors = [
 
 export default function Profile() {
   const { profile, signOut, updateProfile } = useAuth();
-  const [color, setColor] = useState<any>(
-    ColorService.fromHex(profile?.highlightColor ?? '#8B5CF6')
-  );
+  const savedColor = profile?.highlightColor ?? '#8B5CF6';
+  const [color, setColor] = useState<any>(ColorService.fromHex(savedColor));
   const [saving, setSaving] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const currentColor = color?.hex ?? '#8B5CF6';
+  const currentColor = color?.hex ?? savedColor;
 
   const stats = [
     { label: 'Games Won', value: '48', icon: Trophy, color: '#10B981' },
@@ -52,15 +51,22 @@ export default function Profile() {
     setColor(c);
   };
 
-  const handleColorComplete = async (c: any) => {
+  useEffect(() => {
+    if (modalVisible) {
+      setColor(ColorService.fromHex(savedColor));
+    }
+  }, [modalVisible, savedColor]);
+
+  const handleColorComplete = (c: any) => {
     setColor(c);
-    await saveColor(c?.hex ?? '#8B5CF6');
-    setModalVisible(false);
   };
 
-  const selectPrimary = async (hex: string) => {
+  const selectPrimary = (hex: string) => {
     setColor(ColorService.fromHex(hex));
-    await saveColor(hex);
+  };
+
+  const handleSave = async () => {
+    await saveColor(currentColor);
     setModalVisible(false);
   };
 
@@ -84,7 +90,7 @@ export default function Profile() {
           <View style={styles.colorPicker}>
             <Text style={styles.colorLabel}>Highlight Color</Text>
             <TouchableOpacity
-              style={[styles.colorSwatch, { backgroundColor: currentColor }]}
+              style={[styles.colorSwatch, { backgroundColor: savedColor }]}
               onPress={() => setModalVisible(true)}
             />
           </View>
@@ -127,9 +133,15 @@ export default function Profile() {
                   ))}
                 </View>
 
-                {saving && (
-                  <ActivityIndicator size="small" color="#8B5CF6" style={styles.saving} />
-                )}
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSave}
+                  disabled={saving}
+                >
+                  <Text style={styles.saveButtonText}>
+                    {saving ? 'Saving...' : 'Save Color'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </Modal>
@@ -323,6 +335,19 @@ const styles = StyleSheet.create({
   },
   primaryChipSelected: {
     borderColor: '#1E293B',
+  },
+  saveButton: {
+    width: '100%',
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#8B5CF6',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
   },
   saving: {
     marginTop: 8,
