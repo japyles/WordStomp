@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { Settings, Trophy, Target, Clock, Award } from 'lucide-react-native';
@@ -23,6 +23,7 @@ export default function Profile() {
     ColorService.fromHex(profile?.highlightColor ?? '#8B5CF6')
   );
   const [saving, setSaving] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const currentColor = color?.hex ?? '#8B5CF6';
 
   const stats = [
@@ -54,11 +55,13 @@ export default function Profile() {
   const handleColorComplete = async (c: any) => {
     setColor(c);
     await saveColor(c?.hex ?? '#8B5CF6');
+    setModalVisible(false);
   };
 
   const selectPrimary = async (hex: string) => {
     setColor(ColorService.fromHex(hex));
     await saveColor(hex);
+    setModalVisible(false);
   };
 
   return (
@@ -78,38 +81,58 @@ export default function Profile() {
           <Text style={styles.username}>{profile?.name}</Text>
           <Text style={styles.email}>{profile?.email}</Text>
 
-          <View style={styles.colorSection}>
+          <View style={styles.colorPicker}>
             <Text style={styles.colorLabel}>Highlight Color</Text>
-
-            <View style={styles.pickerContainer}>
-              <ColorPicker
-                color={color}
-                onChange={handleColorChange}
-                onChangeComplete={handleColorComplete}
-                style={styles.picker}
-              />
-            </View>
-
-            <View style={styles.primaryRow}>
-              {primaryColors.map((hex) => (
-                <TouchableOpacity
-                  key={hex}
-                  style={[
-                    styles.primaryChip,
-                    { backgroundColor: hex },
-                    currentColor === hex && styles.primaryChipSelected,
-                  ]}
-                  onPress={() => selectPrimary(hex)}
-                />
-              ))}
-            </View>
-
-            <View style={styles.swatchRow}>
-              <View style={[styles.colorSwatch, { backgroundColor: currentColor }]} />
-              <Text style={styles.colorValue}>{currentColor}</Text>
-              {saving && <ActivityIndicator size="small" color="#8B5CF6" style={styles.saving} />}
-            </View>
+            <TouchableOpacity
+              style={[styles.colorSwatch, { backgroundColor: currentColor }]}
+              onPress={() => setModalVisible(true)}
+            />
           </View>
+
+          <Modal
+            animationType="slide"
+            transparent
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Choose Highlight Color</Text>
+                  <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <Text style={styles.modalClose}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.pickerContainer}>
+                  <ColorPicker
+                    color={color}
+                    onChange={handleColorChange}
+                    onChangeComplete={handleColorComplete}
+                    style={styles.picker}
+                  />
+                </View>
+
+                <View style={styles.primaryRow}>
+                  {primaryColors.map((hex) => (
+                    <TouchableOpacity
+                      key={hex}
+                      style={[
+                        styles.primaryChip,
+                        { backgroundColor: hex },
+                        currentColor === hex && styles.primaryChipSelected,
+                      ]}
+                      onPress={() => selectPrimary(hex)}
+                    />
+                  ))}
+                </View>
+
+                {saving && (
+                  <ActivityIndicator size="small" color="#8B5CF6" style={styles.saving} />
+                )}
+              </View>
+            </View>
+          </Modal>
         </View>
 
         <View style={styles.statsSection}>
@@ -223,15 +246,54 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 16,
   },
-  colorSection: {
-    width: '100%',
+  colorPicker: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   colorLabel: {
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#64748B',
+  },
+  colorSwatch: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
     fontFamily: 'Inter-SemiBold',
     color: '#1E293B',
-    marginBottom: 12,
+  },
+  modalClose: {
+    fontSize: 20,
+    color: '#64748B',
+    padding: 4,
   },
   pickerContainer: {
     width: '100%',
@@ -262,26 +324,8 @@ const styles = StyleSheet.create({
   primaryChipSelected: {
     borderColor: '#1E293B',
   },
-  swatchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  colorSwatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-  },
-  colorValue: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#64748B',
-    textTransform: 'uppercase',
-  },
   saving: {
-    marginLeft: 4,
+    marginTop: 8,
   },
   statsSection: {
     padding: 20,
