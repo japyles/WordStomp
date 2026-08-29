@@ -33,6 +33,11 @@ export default function GameScreen() {
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const gridOrigin = useSharedValue({ x: 0, y: 0 });
+  const cellSizeSV = useSharedValue(28);
+  const gridSizeSV = useSharedValue({ rows: 0, cols: 0 });
+  const selectionStart = useSharedValue<{ row: number; col: number } | null>(null);
+  const lastSelectedRow = useSharedValue(-1);
+  const lastSelectedCol = useSharedValue(-1);
 
   // Calculate cell size based on grid size
   const getCellSize = useCallback(() => {
@@ -79,72 +84,76 @@ export default function GameScreen() {
     });
   }
 
-  const handleTap = useCallback(
+  const handleSelectionEnd = useCallback(
     async (x: number, y: number) => {
       if (!currentGame) return;
 
-      const origin = gridOrigin.value;
-      const size = getCellSize();
-      const row = Math.floor((y - origin.y) / size);
-      const col = Math.floor((x - origin.x) / size);
-
-      if (row < 0 || row >= gridHeight || col < 0 || col >= gridWidth) return;
-
-      if (!selectedStart) {
-        setSelectedStart({ row, col });
-      } else if (!selectedEnd) {
-        if (row === selectedStart.row && col === selectedStart.col) {
-          setSelectedStart(null);
-          return;
-        }
-
-        const dRow = row - selectedStart.row;
-        const dCol = col - selectedStart.col;
-        const steps = Math.max(Math.abs(dRow), Math.abs(dCol));
-        if (steps === 0) {
-          setSelectedStart(null);
-          return;
-        }
-
-        const rowStep = dRow / steps;
-        const colStep = dCol / steps;
-        if (!Number.isInteger(rowStep) || !Number.isInteger(colStep)) {
-          setSelectedStart(null);
-          setSelectedEnd(null);
-          return;
-        }
-
-        const positions: { row: number; col: number }[] = [];
-        let selectedWord = '';
-        for (let i = 0; i <= steps; i++) {
-          const r = selectedStart.row + i * rowStep;
-          const c = selectedStart.col + i * colStep;
-          positions.push({ row: r, col: c });
-          selectedWord += currentGame.gameState.grid[r][c];
-        }
-
-        const reversed = selectedWord.split('').reverse().join('');
-        const match = currentGame.wordList.find((w) => w === selectedWord || w === reversed);
-
-        if (match && !currentGame.gameState.foundWords[match]) {
-          const matchPositions = match === reversed ? positions.slice().reverse() : positions;
-          await findWord(match, matchPositions);
-        }
-
+      const start = selectionStart.value;
+      if (!start) {
         setSelectedStart(null);
         setSelectedEnd(null);
-      } else {
-        setSelectedStart({ row, col });
-        setSelectedEnd(null);
+        return;
       }
-    },
-    [currentGame, findWord, getCellSize, gridOrigin, gridHeight, gridWidth, selectedStart, selectedEnd]
-  );
 
-  const tap = Gesture.Tap().onEnd((event) => {
-    'worklet';
-    runOnJS(handleTap)(event.x, event.y);
-  });
+      const origin = gridOrigin.value;
+      const size = cellSizeSV.value;
+      const endRow = Math.floor((y - origin.y) / size);
+      const endCol = Math.floor((x - origin.x) / size);
+
+      if (
+        endRow < 0 ||
+        endRow >= gridHeight ||
+        endCol < 0 ||
+        endCol >= gridWidth
+      ) {
+        setSelectedStart(null);
+        setSelectedEnd(null);
+        selectionStart.value = null;
+        return;
+      }
+
+      const dRow = endRow - start.row;
+      const dCol = endCol - start.col;
+      const steps = Math.max(Math.abs(dRow), Math.abs(dCol));
+      if (steps === 0) {
+        setSelectedStart(null);
+        setSelectedEnd(null);
+        selectionStart.value = null;
+        return;
+      }
+
+      const rowStep = dRow / steps;
+      const colStep = dCol / steps;
+      if (!Number.isInteger(rowStep) || !Number.isInteger(colStep)) {
+        setSelectedStart(null);
+        setSelectedEnd(null);
+        selectionStart.value = null;
+        return;
+      }
+
+      const positions: { row: number; col: number }[] = [];
+      let selectedWord = '';
+      for (let i = 0; i <= steps; i++) {
+        const r = start.row + i * rowStep;
+        const c = start.col + i * colStep;
+        positions.push({ row: r, col: c });
+        selectedWord += currentGame.gameState.grid[r][c];
+      }
+
+      const reversed = selectedWord.split('').reverse().join('');
+      const match = currentGame.wordList.find((w) => w === selectedWord || w === reversed);
+
+      if (match && !currentGame.gameState.foundWords[match]) {
+        const matchPositions = match === reversed ? positions.slice().reverse() : positions;
+        await findWord(match, matchPositions);
+      }
+
+      setSelectedStart(null);
+      setSelectedEnd(null);
+      selectionStart.value = null;
+    },
+    [currentGame, findWord, gridOrigin, cellSizeSV, selectionStart, gridHeight, gridWidth]
+  );
 
   const pinch = Gesture.Pinch()
     .onBegin(() => {
@@ -172,25 +181,62 @@ export default function GameScreen() {
 
   const pan = Gesture.Pan()
     .maxPointers(1)
-    .onBegin(() => {
+    .onBegin((event) => {
       'worklet';
-      startX.value = savedTranslateX.value;
-      startY.value = savedTranslateY.value;
+      if (scale.value > 1) {
+        startX.value = savedTranslateX.value;
+        startY.value = savedTranslateY.value;
+      } else {
+        const origin = gridOrigin.value;
+        const col = Math.floor((event.x - origin.x) / cellSizeSV.value);
+        const row = Math.floor((event.y - origin.y) / cellSizeSV.value);
+        if (
+          row >= 0 &&
+          row < gridSizeSV.value.rows &&
+          col >= 0 &&
+          col < gridSizeSV.value.cols
+        ) {
+          selectionStart.value = { row, col };
+          lastSelectedRow.value = row;
+          lastSelectedCol.value = col;
+          runOnJS(setSelectedStart)({ row, col });
+        }
+      }
     })
     .onUpdate((event) => {
       'worklet';
       if (scale.value > 1) {
         translateX.value = startX.value + event.translationX;
         translateY.value = startY.value + event.translationY;
+      } else {
+        const origin = gridOrigin.value;
+        const col = Math.floor((event.x - origin.x) / cellSizeSV.value);
+        const row = Math.floor((event.y - origin.y) / cellSizeSV.value);
+        if (
+          row >= 0 &&
+          row < gridSizeSV.value.rows &&
+          col >= 0 &&
+          col < gridSizeSV.value.cols
+        ) {
+          if (row !== lastSelectedRow.value || col !== lastSelectedCol.value) {
+            lastSelectedRow.value = row;
+            lastSelectedCol.value = col;
+            runOnJS(setSelectedEnd)({ row, col });
+          }
+        }
       }
     })
-    .onEnd(() => {
+    .onEnd((event) => {
       'worklet';
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
+      if (scale.value > 1) {
+        savedTranslateX.value = translateX.value;
+        savedTranslateY.value = translateY.value;
+      } else {
+        runOnJS(handleSelectionEnd)(event.x, event.y);
+      }
     });
 
-  const composed = Gesture.Simultaneous(Gesture.Exclusive(tap, pan), pinch);
+  const composed = Gesture.Simultaneous(pan, pinch);
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
@@ -205,6 +251,12 @@ export default function GameScreen() {
 
   // Reset zoom and pan when game changes
   useEffect(() => {
+    if (currentGame) {
+      const size = getCellSize();
+      cellSizeSV.value = size;
+      const [cols, rows] = currentGame.gridSize.split('x').map(Number);
+      gridSizeSV.value = { rows, cols };
+    }
     scale.value = withTiming(1);
     translateX.value = withTiming(0);
     translateY.value = withTiming(0);
@@ -213,6 +265,9 @@ export default function GameScreen() {
     savedTranslateY.value = 0;
     setSelectedStart(null);
     setSelectedEnd(null);
+    selectionStart.value = null;
+    lastSelectedRow.value = -1;
+    lastSelectedCol.value = -1;
   }, [currentGame?._id]);
 
   useEffect(() => {
