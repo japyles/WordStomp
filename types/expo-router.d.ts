@@ -1,4 +1,4 @@
-import { Link, LinkProps } from 'expo-router';
+export {};
 
 declare global {
   namespace ReactNavigation {
@@ -6,12 +6,5 @@ declare global {
       'game/[id]': { id: string };
       // Add other routes here as needed
     }
-  }
-}
-
-// This extends the Link component to include our custom routes
-declare module 'expo-router' {
-  interface LinkProps<T> extends Omit<LinkProps<T>, 'href'> {
-    href: string | { pathname: string; params?: Record<string, string> };
   }
 }
