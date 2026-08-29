@@ -5,6 +5,7 @@ import { useGame } from '@/contexts/GameContext';
 import { ArrowLeft } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Svg, { Line } from 'react-native-svg';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -22,6 +23,7 @@ export default function GameScreen() {
   const [selectedStart, setSelectedStart] = useState<{ row: number; col: number } | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<{ row: number; col: number } | null>(null);
   const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
+  const [gridLayout, setGridLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   // Animation values
   const scale = useSharedValue(1);
@@ -70,18 +72,6 @@ export default function GameScreen() {
     }
   } else if (selectedStart) {
     selectedCells.add(`${selectedStart.row}-${selectedStart.col}`);
-  }
-
-  const foundColors = new Map<string, string>();
-  if (currentGame) {
-    Object.values(currentGame.gameState.foundWords).forEach((data) => {
-      data.positions.forEach((pos) => {
-        const key = `${pos.row}-${pos.col}`;
-        if (!foundColors.has(key)) {
-          foundColors.set(key, data.color);
-        }
-      });
-    });
   }
 
   const handleSelectionEnd = useCallback(
@@ -372,23 +362,52 @@ export default function GameScreen() {
               <View
                 style={styles.grid}
                 onLayout={(event) => {
-                  const { x, y } = event.nativeEvent.layout;
+                  const { x, y, width, height } = event.nativeEvent.layout;
                   gridOrigin.value = { x, y };
+                  setGridLayout({ x, y, width, height });
                 }}
               >
+                {gridLayout.width > 0 && gridLayout.height > 0 && (
+                  <Svg
+                    width={gridLayout.width}
+                    height={gridLayout.height}
+                    viewBox={`0 0 ${gridLayout.width} ${gridLayout.height}`}
+                    style={styles.foundWordsOverlay}
+                  >
+                    {Object.entries(currentGame.gameState.foundWords).map(([word, data]) => {
+                      const start = data.positions[0];
+                      const end = data.positions[data.positions.length - 1];
+                      const x1 = start.col * cellSize + cellSize / 2;
+                      const y1 = start.row * cellSize + cellSize / 2;
+                      const x2 = end.col * cellSize + cellSize / 2;
+                      const y2 = end.row * cellSize + cellSize / 2;
+                      return (
+                        <Line
+                          key={word}
+                          x1={x1}
+                          y1={y1}
+                          x2={x2}
+                          y2={y2}
+                          stroke={data.color}
+                          strokeWidth={Math.max(8, cellSize - 6)}
+                          strokeLinecap="round"
+                        />
+                      );
+                    })}
+                  </Svg>
+                )}
+
                 {currentGame.gameState.grid.map((row, rowIndex) => (
                   <View key={`row-${rowIndex}`} style={styles.row}>
                     {row.map((cell, colIndex) => {
                       const key = `${rowIndex}-${colIndex}`;
                       const isSelected = selectedCells.has(key);
-                      const foundColor = foundColors.get(key);
                       return (
                         <View
                           key={`cell-${rowIndex}-${colIndex}`}
                           style={[
                             styles.cell,
                             { width: cellSize, height: cellSize },
-                            foundColor && { backgroundColor: foundColor },
                             isSelected && { backgroundColor: 'rgba(139,92,246,0.3)' },
                           ]}
                         >
@@ -503,7 +522,13 @@ const styles = StyleSheet.create({
     color: '#00281F',
   },
   grid: {
+    position: 'relative',
     backgroundColor: 'transparent',
+  },
+  foundWordsOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   row: {
     flexDirection: 'row',
