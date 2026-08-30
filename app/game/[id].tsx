@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ScrollView } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useGame } from '@/contexts/GameContext';
 import { useMutation } from 'convex/react';
@@ -466,7 +466,7 @@ export default function GameScreen() {
         {/* Word list */}
         <View style={styles.wordList}>
           <Text style={styles.wordListTitle}>Words to Find:</Text>
-          <View style={styles.wordsContainer}>
+          <ScrollView style={styles.wordsScroll} contentContainerStyle={styles.wordsContainer}>
             {currentGame.wordList.map((word, index) => {
               const isFound = currentGame.gameState.foundWords[word];
               return (
@@ -481,7 +481,7 @@ export default function GameScreen() {
                 </Text>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
 
         {showConfetti && (
@@ -609,11 +609,17 @@ const styles = StyleSheet.create({
   },
   wordList: {
     padding: 16,
+    paddingBottom: 8,
     backgroundColor: '#FFFFFF',
     // borderTopWidth: 1,
     // borderTopColor: '#E2E8F0',
-    // maxHeight: 150,
+    maxHeight: 220,
     alignItems: 'center',
+    width: '100%',
+  },
+  wordsScroll: {
+    width: '100%',
+    maxHeight: 150,
   },
   wordsContainer: {
     flexDirection: 'row',
