@@ -209,7 +209,7 @@ export default function GameScreen() {
       'worklet';
       startX.value = savedTranslateX.value;
       startY.value = savedTranslateY.value;
-      if (scale.value <= 1) {
+      if (scale.value <= 1 && selectionStart.value === null) {
         selectionStart.value = null;
         lastSelectedRow.value = -1;
         lastSelectedCol.value = -1;
@@ -282,7 +282,40 @@ export default function GameScreen() {
       savedTranslateY.value = 0;
     });
 
-  const composed = Gesture.Simultaneous(pan, pinch, longPress, doubleTap);
+  const singleTap = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd((event) => {
+      'worklet';
+      const origin = gridOrigin.value;
+      const size = cellSizeSV.value;
+      const col = Math.floor((event.x - origin.x) / size);
+      const row = Math.floor((event.y - origin.y) / size);
+      if (
+        row < 0 ||
+        row >= gridSizeSV.value.rows ||
+        col < 0 ||
+        col >= gridSizeSV.value.cols
+      ) {
+        return;
+      }
+
+      if (selectionStart.value === null) {
+        selectionStart.value = { row, col };
+        lastSelectedRow.value = row;
+        lastSelectedCol.value = col;
+        runOnJS(setSelectedStart)({ row, col });
+        runOnJS(setSelectedEnd)({ row, col });
+      } else {
+        lastSelectedRow.value = row;
+        lastSelectedCol.value = col;
+        runOnJS(setSelectedEnd)({ row, col });
+        runOnJS(handleSelectionEnd)(event.x, event.y);
+      }
+    });
+
+  const taps = Gesture.Exclusive(doubleTap, singleTap);
+
+  const composed = Gesture.Simultaneous(pan, pinch, longPress, taps);
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
