@@ -13,17 +13,41 @@ export interface WordSearchPuzzle {
 const generateId = (): string => Math.random().toString(36).substring(2, 15);
 
 // Helper function to generate a grid with words placed randomly
+const createEmptyGrid = (size: number): string[][] =>
+  Array(size).fill(null).map(() => Array(size).fill(''));
+
 const generateGrid = (size: number, words: string[]): string[][] => {
-  // Create empty grid
-  const grid: string[][] = Array(size).fill(null).map(() => Array(size).fill(''));
-  
-  // Place words
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const grid = createEmptyGrid(size);
+    let allPlaced = true;
+
+    for (const word of words) {
+      if (!placeWord(grid, word, size)) {
+        allPlaced = false;
+        break;
+      }
+    }
+
+    if (allPlaced) {
+      // Fill remaining spaces with random letters
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          if (!grid[i][j]) {
+            grid[i][j] = alphabet[Math.floor(Math.random() * alphabet.length)];
+          }
+        }
+      }
+      return grid;
+    }
+  }
+
+  // Fallback: return a grid with as many placed as possible
+  const grid = createEmptyGrid(size);
   for (const word of words) {
     placeWord(grid, word, size);
   }
-  
-  // Fill remaining spaces with random letters
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   for (let i = 0; i < size; i++) {
     for (let j = 0; j < size; j++) {
       if (!grid[i][j]) {
@@ -31,7 +55,6 @@ const generateGrid = (size: number, words: string[]): string[][] => {
       }
     }
   }
-  
   return grid;
 };
 
@@ -144,10 +167,8 @@ const generatePuzzles = (): WordSearchPuzzle[] => {
     gridSizes.forEach(({size, name: gridSize}) => {
       // Generate 25 puzzles for each category and size
       for (let i = 0; i < 25; i++) {
-        // Take a random sample of words (5-8 for 10x10, 10-12 for 15x15, 15-20 for 20x20)
-        const minWords = gridSize === '10x10' ? 5 : gridSize === '15x15' ? 10 : 15;
-        const maxWords = gridSize === '10x10' ? 8 : gridSize === '15x15' ? 12 : 20;
-        const wordCount = minWords + Math.floor(Math.random() * (maxWords - minWords + 1));
+        // Fixed word counts: 11 for 10x10, 15 for 15x15, 25 for 20x20
+        const wordCount = gridSize === '10x10' ? 11 : gridSize === '15x15' ? 15 : 25;
         
         // Shuffle and take first wordCount words
         const shuffledWords = [...wordLists[category]]
