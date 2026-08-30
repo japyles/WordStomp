@@ -21,8 +21,10 @@ export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { currentGame, findWord, saveGame } = useGame();
   const completeGame = useMutation(api.games.complete);
+  const resumeGame = useMutation(api.games.resume);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isGameComplete, setIsGameComplete] = useState(false);
+  const [hasResumed, setHasResumed] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [selectedStart, setSelectedStart] = useState<{ row: number; col: number } | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<{ row: number; col: number } | null>(null);
@@ -301,19 +303,28 @@ export default function GameScreen() {
   }, [currentGame?.gameState.foundWords]);
 
   useEffect(() => {
+    if (currentGame && !hasResumed && currentGame.status !== 'completed') {
+      resumeGame({ gameId: id as any });
+      setHasResumed(true);
+    }
+  }, [currentGame?.status]);
+
+  useEffect(() => {
     if (!currentGame) return;
     if (currentGame.status === 'completed' || isGameComplete) {
       setElapsed(Math.round(currentGame.duration ?? 0));
       return;
     }
+    const lastResumedAt = currentGame.lastResumedAt ?? currentGame._creationTime;
+    const savedElapsed = currentGame.savedElapsed ?? 0;
     const tick = () => {
       const now = Date.now() / 1000;
-      setElapsed(Math.max(0, Math.floor(now - currentGame._creationTime)));
+      setElapsed(Math.max(0, Math.floor(now - lastResumedAt + savedElapsed)));
     };
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [currentGame, isGameComplete]);
+  }, [currentGame?.lastResumedAt, currentGame?.savedElapsed, currentGame?.status, isGameComplete]);
 
   const handleBackPress = () => {
     if (!currentGame) return;

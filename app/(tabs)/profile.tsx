@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGame } from '@/contexts/GameContext';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Settings, Trophy, Target, Clock, Award } from 'lucide-react-native';
+import { Settings, Trophy, Target, Clock, Award, Play } from 'lucide-react-native';
 import { ColorPicker } from 'react-native-color-picker-palette/lite';
 import { ColorService } from 'react-native-color-picker-palette';
 
@@ -21,12 +23,15 @@ const primaryColors = [
 
 export default function Profile() {
   const { profile, signOut, updateProfile } = useAuth();
+  const { loadGame } = useGame();
+  const router = useRouter();
   const savedColor = profile?.highlightColor ?? '#8B5CF6';
   const [color, setColor] = useState<any>(ColorService.fromHex(savedColor));
   const [saving, setSaving] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const currentColor = color?.hex ?? savedColor;
   const statsData = useQuery(api.users.stats, {});
+  const activeGames = useQuery(api.games.myActiveGames, {});
 
   const gamesWon = statsData?.gamesWon ?? 0;
   const winRate = statsData?.winRate ?? 0;
@@ -216,6 +221,38 @@ export default function Profile() {
             ))}
           </View>
         </View>
+
+        {activeGames && activeGames.length > 0 && (
+          <View style={styles.savedGamesSection}>
+            <Text style={styles.sectionTitle}>Saved Games</Text>
+            <View style={styles.savedGamesList}>
+              {activeGames.map((game) => {
+                const foundCount = Object.keys(game.gameState.foundWords).length;
+                const totalWords = game.wordList.length;
+                return (
+                  <TouchableOpacity
+                    key={game._id}
+                    style={styles.savedGameCard}
+                    onPress={() => {
+                      loadGame(game._id);
+                      router.push(`/game/${game._id}`);
+                    }}
+                  >
+                    <View style={styles.savedGameInfo}>
+                      <Text style={styles.savedGameCategory}>{game.category}</Text>
+                      <Text style={styles.savedGameMeta}>
+                        {game.gridSize} • {foundCount}/{totalWords} words
+                      </Text>
+                    </View>
+                    <View style={styles.playButton}>
+                      <Play size={20} color="#FFFFFF" fill="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -470,5 +507,43 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontFamily: 'Inter-Bold',
+  },
+  savedGamesSection: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  savedGamesList: {
+    gap: 12,
+  },
+  savedGameCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  savedGameInfo: {
+    flex: 1,
+  },
+  savedGameCategory: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  savedGameMeta: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+  },
+  playButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#8B5CF6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

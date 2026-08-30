@@ -27,6 +27,21 @@ export const get = query({
   },
 });
 
+export const myActiveGames = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+
+    const games = await ctx.db.query("games").collect();
+    return games.filter(
+      (g) =>
+        g.participants.includes(userId) &&
+        g.status !== "completed"
+    );
+  },
+});
+
 export const create = mutation({
   args: {
     wordList: v.array(v.string()),
@@ -36,13 +51,16 @@ export const create = mutation({
     participants: v.array(v.id("users")),
   },
   handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
     return await ctx.db.insert("games", {
       wordList: args.wordList,
       gridSize: args.gridSize,
       category: args.category,
       participants: args.participants,
       gameState: args.gameState,
-      status: "waiting",
+      status: "active",
+      lastResumedAt: now,
+      savedElapsed: 0,
     });
   },
 });
@@ -70,6 +88,18 @@ export const join = mutation({
         },
       },
     });
+  },
+});
+
+export const resume = mutation({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, { gameId }) => {
+    const game = await ctx.db.get(gameId);
+    if (!game) throw new Error("Game not found");
+    if (game.status === "completed") return;
+
+    const now = Date.now() / 1000;
+    await ctx.db.patch(gameId, { lastResumedAt: now });
   },
 });
 
@@ -121,7 +151,15 @@ export const save = mutation({
   handler: async (ctx, { gameId }) => {
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    await ctx.db.patch(gameId, { gameState: game.gameState });
+
+    const now = Date.now() / 1000;
+    const lastResumedAt = game.lastResumedAt ?? game._creationTime;
+    const savedElapsed = (game.savedElapsed ?? 0) + Math.max(0, now - lastResumedAt);
+    await ctx.db.patch(gameId, {
+      gameState: game.gameState,
+      savedElapsed,
+      lastResumedAt: now,
+    });
   },
 });
 
@@ -133,11 +171,14 @@ export const complete = mutation({
     if (game.status === "completed") return;
 
     const now = Date.now() / 1000;
-    const duration = Math.max(0, now - game._creationTime);
+    const lastResumedAt = game.lastResumedAt ?? game._creationTime;
+    const duration = (game.savedElapsed ?? 0) + Math.max(0, now - lastResumedAt);
     await ctx.db.patch(gameId, {
       status: "completed",
       completedAt: now,
       duration,
+      savedElapsed: (game.savedElapsed ?? 0),
+      lastResumedAt: now,
     });
   },
 });

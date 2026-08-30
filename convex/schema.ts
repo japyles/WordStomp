@@ -48,5 +48,7 @@ export default defineSchema({
     tournamentId: v.optional(v.string()),
     completedAt: v.optional(v.number()),
     duration: v.optional(v.number()),
+    lastResumedAt: v.optional(v.number()),
+    savedElapsed: v.optional(v.number()),
   }),
 });

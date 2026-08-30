@@ -38,4 +38,6 @@ export interface Game {
   tournamentId?: string;
   completedAt?: number;
   duration?: number;
+  lastResumedAt?: number;
+  savedElapsed?: number;
 }

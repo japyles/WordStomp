@@ -15,6 +15,7 @@ interface GameContextType {
   error: string | null;
   createGame: (category: Category, gridSize: GridSize) => Promise<string | null>;
   joinGame: (gameId: string) => Promise<boolean>;
+  loadGame: (gameId: string) => void;
   leaveGame: () => void;
   updateGameState: (gameState: GameState) => Promise<void>;
   findWord: (word: string, positions: { row: number; col: number }[]) => Promise<void>;
@@ -97,6 +98,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loadGame = (gameId: string) => {
+    setCurrentGameId(gameId);
+    setError(null);
+  };
+
   const leaveGame = () => {
     setCurrentGameId(undefined);
     setError(null);
@@ -150,6 +156,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     error,
     createGame,
     joinGame,
+    loadGame,
     leaveGame,
     updateGameState,
     findWord,
