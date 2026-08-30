@@ -648,13 +648,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     // borderTopWidth: 1,
     // borderTopColor: '#E2E8F0',
-    maxHeight: 220,
+    maxHeight: 280,
     alignItems: 'center',
     width: '100%',
   },
   wordsScroll: {
     width: '100%',
-    maxHeight: 150,
+    maxHeight: 230,
   },
   wordsContainer: {
     flexDirection: 'row',
