@@ -316,6 +316,10 @@ export default function GameScreen() {
     lastSelectedCol.value = -1;
   }, [currentGame?._id, boardSize.width, boardSize.height]);
 
+  const foundWordsKey = currentGame
+    ? currentGame.wordList.filter((w) => currentGame.gameState.foundWords[w]).join(',')
+    : '';
+
   useEffect(() => {
     // Check if all words are found
     if (currentGame) {
@@ -335,7 +339,7 @@ export default function GameScreen() {
         return () => clearTimeout(timer);
       }
     }
-  }, [currentGame?.gameState.foundWords]);
+  }, [foundWordsKey]);
 
   useEffect(() => {
     if (currentGame && !hasResumed && currentGame.status !== 'completed') {
