@@ -124,3 +124,20 @@ export const save = mutation({
     await ctx.db.patch(gameId, { gameState: game.gameState });
   },
 });
+
+export const complete = mutation({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, { gameId }) => {
+    const game = await ctx.db.get(gameId);
+    if (!game) throw new Error("Game not found");
+    if (game.status === "completed") return;
+
+    const now = Date.now() / 1000;
+    const duration = Math.max(0, now - game._creationTime);
+    await ctx.db.patch(gameId, {
+      status: "completed",
+      completedAt: now,
+      duration,
+    });
+  },
+});

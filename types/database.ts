@@ -36,4 +36,6 @@ export interface Game {
   gameState: GameState;
   status: 'waiting' | 'active' | 'completed';
   tournamentId?: string;
+  completedAt?: number;
+  duration?: number;
 }

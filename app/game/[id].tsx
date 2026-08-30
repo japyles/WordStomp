@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useGame } from '@/contexts/GameContext';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { ArrowLeft } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,6 +20,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { currentGame, findWord, saveGame } = useGame();
+  const completeGame = useMutation(api.games.complete);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [selectedStart, setSelectedStart] = useState<{ row: number; col: number } | null>(null);
@@ -276,9 +279,10 @@ export default function GameScreen() {
         currentGame.gameState.foundWords[word]
       );
 
-      if (allWordsFound && !isGameComplete) {
+      if (allWordsFound && !isGameComplete && currentGame.status !== 'completed') {
         setIsGameComplete(true);
         setShowConfetti(true);
+        completeGame({ gameId: id as any });
         // Let confetti settle, then go home
         const timer = setTimeout(() => {
           setShowConfetti(false);

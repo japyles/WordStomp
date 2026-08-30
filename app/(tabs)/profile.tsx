@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Settings, Trophy, Target, Clock, Award } from 'lucide-react-native';
 import { ColorPicker } from 'react-native-color-picker-palette/lite';
 import { ColorService } from 'react-native-color-picker-palette';
@@ -24,20 +26,35 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const currentColor = color?.hex ?? savedColor;
+  const statsData = useQuery(api.users.stats, {});
 
-  const stats = [
-    { label: 'Games Won', value: '48', icon: Trophy, color: '#10B981' },
-    { label: 'Win Rate', value: '76%', icon: Target, color: '#8B5CF6' },
-    { label: 'Avg. Time', value: '2:34', icon: Clock, color: '#F59E0B' },
-    { label: 'Tournaments', value: '3', icon: Award, color: '#EF4444' },
+  const gamesWon = statsData?.gamesWon ?? 0;
+  const winRate = statsData?.winRate ?? 0;
+  const avgTime = statsData?.avgTime ?? 0;
+  const tournaments = statsData?.tournaments ?? 0;
+  const wordsFound = statsData?.wordsFound ?? 0;
+  const fastWins = statsData?.fastWins ?? 0;
+
+  const formatTime = (seconds: number) => {
+    if (seconds <= 0) return '—';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const statCards = [
+    { label: 'Games Won', value: String(gamesWon), icon: Trophy, color: '#10B981' },
+    { label: 'Win Rate', value: `${winRate}%`, icon: Target, color: '#8B5CF6' },
+    { label: 'Avg. Time', value: formatTime(avgTime), icon: Clock, color: '#F59E0B' },
+    { label: 'Tournaments', value: String(tournaments), icon: Award, color: '#EF4444' },
   ];
 
   const achievements = [
-    { id: 1, name: 'First Victory', description: 'Win your first game', unlocked: true, icon: '🏆' },
-    { id: 2, name: 'Speed Demon', description: 'Complete a puzzle in under 1 minute', unlocked: true, icon: '⚡' },
-    { id: 3, name: 'Word Master', description: 'Find 100 words', unlocked: true, icon: '📝' },
-    { id: 4, name: 'Streak Legend', description: 'Win 10 games in a row', unlocked: false, icon: '🔥' },
-    { id: 5, name: 'Tournament Champion', description: 'Win a tournament', unlocked: false, icon: '👑' },
+    { id: 1, name: 'First Victory', description: 'Win your first game', unlocked: gamesWon >= 1, icon: '🏆' },
+    { id: 2, name: 'Speed Demon', description: 'Complete a puzzle in under 1 minute', unlocked: fastWins >= 1, icon: '⚡' },
+    { id: 3, name: 'Word Master', description: 'Find 100 words', unlocked: wordsFound >= 100, icon: '📝' },
+    { id: 4, name: 'Streak Legend', description: 'Win 10 games in a row', unlocked: gamesWon >= 10, icon: '🔥' },
+    { id: 5, name: 'Tournament Champion', description: 'Win a tournament', unlocked: tournaments >= 1, icon: '👑' },
   ];
 
   const saveColor = async (hex: string) => {
@@ -150,7 +167,7 @@ export default function Profile() {
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Statistics</Text>
           <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
+            {statCards.map((stat, index) => (
               <View key={index} style={styles.statCard}>
                 <View style={[styles.statIcon, { backgroundColor: stat.color }]}>
                   <stat.icon size={20} color="#FFFFFF" />

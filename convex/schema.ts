@@ -46,5 +46,7 @@ export default defineSchema({
     gameState: gameStateValidator,
     status: gameStatusValidator,
     tournamentId: v.optional(v.string()),
+    completedAt: v.optional(v.number()),
+    duration: v.optional(v.number()),
   }),
 });

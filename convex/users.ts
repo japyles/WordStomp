@@ -30,3 +30,58 @@ export const update = mutation({
     await ctx.db.patch(userId, updates);
   },
 });
+
+export const stats = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
+
+    const games = await ctx.db.query("games").collect();
+    const userGames = games.filter((g) => g.participants.includes(userId));
+
+    let gamesPlayed = 0;
+    let gamesWon = 0;
+    let totalDuration = 0;
+    let completedDurations = 0;
+    let tournamentCount = 0;
+    let wordsFound = 0;
+    let fastWins = 0;
+
+    for (const game of userGames) {
+      gamesPlayed++;
+      const foundByUser = Object.values(game.gameState.foundWords).filter(
+        (w) => w.foundBy === userId
+      ).length;
+      wordsFound += foundByUser;
+
+      if (game.tournamentId) {
+        tournamentCount++;
+      }
+
+      if (game.status === "completed") {
+        gamesWon++;
+        if (game.duration !== undefined) {
+          totalDuration += game.duration;
+          completedDurations++;
+          if (game.duration < 60) {
+            fastWins++;
+          }
+        }
+      }
+    }
+
+    const winRate = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
+    const avgDuration = completedDurations > 0 ? Math.round(totalDuration / completedDurations) : 0;
+
+    return {
+      gamesWon,
+      gamesPlayed,
+      winRate,
+      avgTime: avgDuration,
+      tournaments: tournamentCount,
+      wordsFound,
+      fastWins,
+    };
+  },
+});
