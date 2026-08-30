@@ -181,6 +181,28 @@ export default function GameScreen() {
       savedTranslateY.value = translateY.value;
     });
 
+  const longPress = Gesture.LongPress()
+    .minDuration(500)
+    .onStart((event) => {
+      'worklet';
+      const origin = gridOrigin.value;
+      const size = cellSizeSV.value;
+      const startCol = Math.floor((event.x - origin.x) / size);
+      const startRow = Math.floor((event.y - origin.y) / size);
+      if (
+        startRow >= 0 &&
+        startRow < gridSizeSV.value.rows &&
+        startCol >= 0 &&
+        startCol < gridSizeSV.value.cols
+      ) {
+        selectionStart.value = { row: startRow, col: startCol };
+        lastSelectedRow.value = startRow;
+        lastSelectedCol.value = startCol;
+        runOnJS(setSelectedStart)({ row: startRow, col: startCol });
+        runOnJS(setSelectedEnd)({ row: startRow, col: startCol });
+      }
+    });
+
   const pan = Gesture.Pan()
     .maxPointers(1)
     .onBegin(() => {
@@ -195,7 +217,7 @@ export default function GameScreen() {
     })
     .onUpdate((event) => {
       'worklet';
-      if (scale.value > 1) {
+      if (scale.value > 1 && selectionStart.value === null) {
         translateX.value = startX.value + event.translationX;
         translateY.value = startY.value + event.translationY;
       } else {
@@ -239,15 +261,15 @@ export default function GameScreen() {
     })
     .onEnd((event) => {
       'worklet';
-      if (scale.value > 1) {
+      if (scale.value > 1 && selectionStart.value === null) {
         savedTranslateX.value = translateX.value;
         savedTranslateY.value = translateY.value;
-      } else {
+      } else if (selectionStart.value !== null) {
         runOnJS(handleSelectionEnd)(event.x, event.y);
       }
     });
 
-  const composed = Gesture.Simultaneous(pan, pinch);
+  const composed = Gesture.Simultaneous(pan, pinch, longPress);
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
