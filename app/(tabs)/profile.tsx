@@ -172,7 +172,6 @@ export default function Profile() {
                     color={color}
                     onChange={handleColorChange}
                     onChangeComplete={handleColorComplete}
-                    style={styles.picker}
                   />
                 </View>
 
@@ -415,10 +414,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 16,
     backgroundColor: '#F8FAFC',
-  },
-  picker: {
-    width: '100%',
-    height: '100%',
   },
   primaryRow: {
     flexDirection: 'row',
