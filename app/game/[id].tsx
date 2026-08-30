@@ -419,14 +419,14 @@ export default function GameScreen() {
         </View>
 
         {/* Zoomable and pannable game board */}
-        <View
-          style={styles.gameBoardContainer}
-          onLayout={(event) => {
-            const { width, height } = event.nativeEvent.layout;
-            setBoardSize({ width, height });
-          }}
-        >
-          <GestureDetector gesture={composed}>
+        <GestureDetector gesture={composed}>
+          <View
+            style={styles.gameBoardContainer}
+            onLayout={(event) => {
+              const { width, height } = event.nativeEvent.layout;
+              setBoardSize({ width, height });
+            }}
+          >
             <Animated.View style={[styles.gameBoard, animatedStyle]}>
               <View
                 style={styles.grid}
@@ -495,8 +495,8 @@ export default function GameScreen() {
                 ))}
               </View>
             </Animated.View>
-          </GestureDetector>
-        </View>
+          </View>
+        </GestureDetector>
 
         {/* Word list */}
         <View style={styles.wordList}>
