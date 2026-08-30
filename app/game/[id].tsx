@@ -547,6 +547,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   backButton: {
+    width: 80,
     padding: 8,
   },
   gameInfo: {
@@ -574,8 +575,8 @@ const styles = StyleSheet.create({
     color: '#00281F',
   },
   timer: {
+    width: 80,
     padding: 8,
-    minWidth: 60,
     alignItems: 'center',
   },
   timerText: {
