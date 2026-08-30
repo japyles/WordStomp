@@ -29,7 +29,22 @@ export default function GameScreen() {
   const [selectedStart, setSelectedStart] = useState<{ row: number; col: number } | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<{ row: number; col: number } | null>(null);
   const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
+  const boardSizeSV = useSharedValue({ width: 0, height: 0 });
   const [gridLayout, setGridLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  const toGridPoint = (x: number, y: number) => {
+    'worklet';
+    if (!boardSizeSV.value.width || !boardSizeSV.value.height) {
+      return { row: -1, col: -1 };
+    }
+    const cx = boardSizeSV.value.width / 2;
+    const cy = boardSizeSV.value.height / 2;
+    const localX = (x - cx - translateX.value) / scale.value + cx;
+    const localY = (y - cy - translateY.value) / scale.value + cy;
+    const col = Math.floor((localX - gridOrigin.value.x) / cellSizeSV.value);
+    const row = Math.floor((localY - gridOrigin.value.y) / cellSizeSV.value);
+    return { row, col };
+  };
 
   // Animation values
   const scale = useSharedValue(1);
@@ -91,7 +106,7 @@ export default function GameScreen() {
   }
 
   const handleSelectionEnd = useCallback(
-    async (x: number, y: number) => {
+    async (endRow: number, endCol: number) => {
       if (!currentGame) return;
 
       const start = selectionStart.value;
@@ -100,11 +115,6 @@ export default function GameScreen() {
         setSelectedEnd(null);
         return;
       }
-
-      const origin = gridOrigin.value;
-      const size = cellSizeSV.value;
-      const endRow = Math.floor((y - origin.y) / size);
-      const endCol = Math.floor((x - origin.x) / size);
 
       if (
         endRow < 0 ||
@@ -189,21 +199,18 @@ export default function GameScreen() {
     .minDuration(500)
     .onStart((event) => {
       'worklet';
-      const origin = gridOrigin.value;
-      const size = cellSizeSV.value;
-      const startCol = Math.floor((event.x - origin.x) / size);
-      const startRow = Math.floor((event.y - origin.y) / size);
+      const startPoint = toGridPoint(event.x, event.y);
       if (
-        startRow >= 0 &&
-        startRow < gridSizeSV.value.rows &&
-        startCol >= 0 &&
-        startCol < gridSizeSV.value.cols
+        startPoint.row >= 0 &&
+        startPoint.row < gridSizeSV.value.rows &&
+        startPoint.col >= 0 &&
+        startPoint.col < gridSizeSV.value.cols
       ) {
-        selectionStart.value = { row: startRow, col: startCol };
-        lastSelectedRow.value = startRow;
-        lastSelectedCol.value = startCol;
-        runOnJS(setSelectedStart)({ row: startRow, col: startCol });
-        runOnJS(setSelectedEnd)({ row: startRow, col: startCol });
+        selectionStart.value = { row: startPoint.row, col: startPoint.col };
+        lastSelectedRow.value = startPoint.row;
+        lastSelectedCol.value = startPoint.col;
+        runOnJS(setSelectedStart)({ row: startPoint.row, col: startPoint.col });
+        runOnJS(setSelectedEnd)({ row: startPoint.row, col: startPoint.col });
       }
     });
 
@@ -221,40 +228,32 @@ export default function GameScreen() {
         translateX.value = startX.value + event.translationX;
         translateY.value = startY.value + event.translationY;
       } else {
-        const origin = gridOrigin.value;
-        const size = cellSizeSV.value;
-
-        const startXPos = event.x - event.translationX;
-        const startYPos = event.y - event.translationY;
-
         if (selectionStart.value === null) {
-          const startCol = Math.floor((startXPos - origin.x) / size);
-          const startRow = Math.floor((startYPos - origin.y) / size);
+          const startPoint = toGridPoint(event.x - event.translationX, event.y - event.translationY);
           if (
-            startRow >= 0 &&
-            startRow < gridSizeSV.value.rows &&
-            startCol >= 0 &&
-            startCol < gridSizeSV.value.cols
+            startPoint.row >= 0 &&
+            startPoint.row < gridSizeSV.value.rows &&
+            startPoint.col >= 0 &&
+            startPoint.col < gridSizeSV.value.cols
           ) {
-            selectionStart.value = { row: startRow, col: startCol };
-            lastSelectedRow.value = startRow;
-            lastSelectedCol.value = startCol;
-            runOnJS(setSelectedStart)({ row: startRow, col: startCol });
+            selectionStart.value = { row: startPoint.row, col: startPoint.col };
+            lastSelectedRow.value = startPoint.row;
+            lastSelectedCol.value = startPoint.col;
+            runOnJS(setSelectedStart)({ row: startPoint.row, col: startPoint.col });
           }
         }
 
-        const col = Math.floor((event.x - origin.x) / size);
-        const row = Math.floor((event.y - origin.y) / size);
+        const endPoint = toGridPoint(event.x, event.y);
         if (
-          row >= 0 &&
-          row < gridSizeSV.value.rows &&
-          col >= 0 &&
-          col < gridSizeSV.value.cols
+          endPoint.row >= 0 &&
+          endPoint.row < gridSizeSV.value.rows &&
+          endPoint.col >= 0 &&
+          endPoint.col < gridSizeSV.value.cols
         ) {
-          if (row !== lastSelectedRow.value || col !== lastSelectedCol.value) {
-            lastSelectedRow.value = row;
-            lastSelectedCol.value = col;
-            runOnJS(setSelectedEnd)({ row, col });
+          if (endPoint.row !== lastSelectedRow.value || endPoint.col !== lastSelectedCol.value) {
+            lastSelectedRow.value = endPoint.row;
+            lastSelectedCol.value = endPoint.col;
+            runOnJS(setSelectedEnd)({ row: endPoint.row, col: endPoint.col });
           }
         }
       }
@@ -265,7 +264,8 @@ export default function GameScreen() {
         savedTranslateX.value = translateX.value;
         savedTranslateY.value = translateY.value;
       } else if (selectionStart.value !== null) {
-        runOnJS(handleSelectionEnd)(event.x, event.y);
+        const endPoint = toGridPoint(event.x, event.y);
+        runOnJS(handleSelectionEnd)(endPoint.row, endPoint.col);
       }
     });
 
@@ -286,10 +286,8 @@ export default function GameScreen() {
     .maxDuration(250)
     .onEnd((event) => {
       'worklet';
-      const origin = gridOrigin.value;
-      const size = cellSizeSV.value;
-      const col = Math.floor((event.x - origin.x) / size);
-      const row = Math.floor((event.y - origin.y) / size);
+      const point = toGridPoint(event.x, event.y);
+      const { row, col } = point;
       if (
         row < 0 ||
         row >= gridSizeSV.value.rows ||
@@ -318,7 +316,7 @@ export default function GameScreen() {
         lastSelectedRow.value = row;
         lastSelectedCol.value = col;
         runOnJS(setSelectedEnd)({ row, col });
-        runOnJS(handleSelectionEnd)(event.x, event.y);
+        runOnJS(handleSelectionEnd)(row, col);
       }
     });
 
@@ -471,6 +469,7 @@ export default function GameScreen() {
             onLayout={(event) => {
               const { width, height } = event.nativeEvent.layout;
               setBoardSize({ width, height });
+              boardSizeSV.value = { width, height };
             }}
           >
             <Animated.View style={[styles.gameBoard, animatedStyle]}>
@@ -694,7 +693,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     // borderTopWidth: 1,
     // borderTopColor: '#E2E8F0',
-    maxHeight: 280,
+    // maxHeight: 280,
     alignItems: 'center',
     width: '100%',
   },
