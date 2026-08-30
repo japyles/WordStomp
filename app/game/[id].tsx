@@ -380,7 +380,7 @@ export default function GameScreen() {
 
         <View style={styles.gameInfo}>
           <Text style={styles.categoryText}>{currentGame.category}</Text>
-          <Text style={styles.gridSizeText}>{currentGame.gridSize} Grid</Text>
+          {/* <Text style={styles.gridSizeText}>{currentGame.gridSize} Grid</Text> */}
         </View>
 
         {/* Zoomable and pannable game board */}
@@ -500,7 +500,7 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFF',
   },
   confetti: {
     ...StyleSheet.absoluteFillObject,
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    // backgroundColor: '#F8FAFC',
   },
   gameBoardContainer: {
     width: '100%',
@@ -541,8 +541,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingTop: 32,
+    // borderBottomWidth: 1,
+    // borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
   },
   backButton: {
@@ -554,9 +555,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   categoryText: {
-    fontSize: 18,
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 20,
     fontWeight: '600',
     color: '#00281F',
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
   gridSizeText: {
@@ -605,9 +609,9 @@ const styles = StyleSheet.create({
   wordList: {
     padding: 16,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    maxHeight: 150,
+    // borderTopWidth: 1,
+    // borderTopColor: '#E2E8F0',
+    // maxHeight: 150,
     alignItems: 'center',
   },
   wordsContainer: {
@@ -617,19 +621,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   word: {
+    textAlign: 'center',
+    textAlignVertical: 'center',
     fontSize: 16,
     marginRight: 12,
     marginBottom: 8,
     padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#F8FAFC',
+    borderRadius: 50,
+    // backgroundColor: '#F8FAFC',
     color: '#1E293B',
     overflow: 'hidden',
   },
   foundWord: {
     textDecorationLine: 'line-through',
     color: '#94A3B8',
-    backgroundColor: '#F1F5F9',
+    // backgroundColor: '#F1F5F9',
   },
   wordListTitle: {
     fontSize: 18,
