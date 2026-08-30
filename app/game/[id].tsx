@@ -69,6 +69,12 @@ export default function GameScreen() {
     : [0, 0];
 
   const selectedCells = new Set<string>();
+  if (selectedStart) {
+    selectedCells.add(`${selectedStart.row}-${selectedStart.col}`);
+  }
+  if (selectedEnd) {
+    selectedCells.add(`${selectedEnd.row}-${selectedEnd.col}`);
+  }
   if (selectedStart && selectedEnd) {
     const dRow = selectedEnd.row - selectedStart.row;
     const dCol = selectedEnd.col - selectedStart.col;
@@ -82,8 +88,6 @@ export default function GameScreen() {
         }
       }
     }
-  } else if (selectedStart) {
-    selectedCells.add(`${selectedStart.row}-${selectedStart.col}`);
   }
 
   const handleSelectionEnd = useCallback(
@@ -305,6 +309,15 @@ export default function GameScreen() {
         lastSelectedCol.value = col;
         runOnJS(setSelectedStart)({ row, col });
         runOnJS(setSelectedEnd)({ row, col });
+      } else if (
+        row === selectionStart.value.row &&
+        col === selectionStart.value.col
+      ) {
+        selectionStart.value = null;
+        lastSelectedRow.value = -1;
+        lastSelectedCol.value = -1;
+        runOnJS(setSelectedStart)(null);
+        runOnJS(setSelectedEnd)(null);
       } else {
         lastSelectedRow.value = row;
         lastSelectedCol.value = col;
