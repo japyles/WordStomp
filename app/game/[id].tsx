@@ -269,7 +269,20 @@ export default function GameScreen() {
       }
     });
 
-  const composed = Gesture.Simultaneous(pan, pinch, longPress);
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .maxDelay(250)
+    .onEnd(() => {
+      'worklet';
+      scale.value = withTiming(1, { duration: 200 });
+      translateX.value = withTiming(0, { duration: 200 });
+      translateY.value = withTiming(0, { duration: 200 });
+      savedScale.value = 1;
+      savedTranslateX.value = 0;
+      savedTranslateY.value = 0;
+    });
+
+  const composed = Gesture.Simultaneous(pan, pinch, longPress, doubleTap);
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
