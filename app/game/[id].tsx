@@ -209,15 +209,11 @@ export default function GameScreen() {
 
   const pan = Gesture.Pan()
     .maxPointers(1)
+    .minDistance(8)
     .onBegin(() => {
       'worklet';
       startX.value = savedTranslateX.value;
       startY.value = savedTranslateY.value;
-      if (scale.value <= 1 && selectionStart.value === null) {
-        selectionStart.value = null;
-        lastSelectedRow.value = -1;
-        lastSelectedCol.value = -1;
-      }
     })
     .onUpdate((event) => {
       'worklet';
@@ -328,7 +324,7 @@ export default function GameScreen() {
 
   const taps = Gesture.Exclusive(doubleTap, singleTap);
 
-  const composed = Gesture.Simultaneous(pan, pinch, longPress, taps);
+  const composed = Gesture.Simultaneous(Gesture.Exclusive(pan, taps), pinch, longPress);
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
