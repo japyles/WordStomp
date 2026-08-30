@@ -1,8 +1,10 @@
+import { Id } from 'convex/values';
+
 export interface GameState {
   grid: string[][];
   foundWords: {
     [word: string]: {
-      foundBy: string;
+      foundBy: Id<'users'>;
       positions: { row: number; col: number }[];
       color: string;
     };
@@ -32,7 +34,7 @@ export interface Game {
   wordList: string[];
   gridSize: string;
   category: string;
-  participants: string[];
+  participants: Id<'users'>[];
   gameState: GameState;
   status: 'waiting' | 'active' | 'completed';
   tournamentId?: string;
