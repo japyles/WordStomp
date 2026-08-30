@@ -23,6 +23,7 @@ export default function GameScreen() {
   const completeGame = useMutation(api.games.complete);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isGameComplete, setIsGameComplete] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [selectedStart, setSelectedStart] = useState<{ row: number; col: number } | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<{ row: number; col: number } | null>(null);
   const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
@@ -53,6 +54,12 @@ export default function GameScreen() {
     const minSide = Math.min(boardSize.width, boardSize.height) - 8;
     return Math.max(14, Math.min(28, Math.floor(minSide / maxCells)));
   }, [currentGame, boardSize]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   const cellSize = getCellSize();
   const [gridWidth = 0, gridHeight = 0] = currentGame
@@ -293,6 +300,21 @@ export default function GameScreen() {
     }
   }, [currentGame?.gameState.foundWords]);
 
+  useEffect(() => {
+    if (!currentGame) return;
+    if (currentGame.status === 'completed' || isGameComplete) {
+      setElapsed(Math.round(currentGame.duration ?? 0));
+      return;
+    }
+    const tick = () => {
+      const now = Date.now() / 1000;
+      setElapsed(Math.max(0, Math.floor(now - currentGame._creationTime)));
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [currentGame, isGameComplete]);
+
   const handleBackPress = () => {
     if (!currentGame) return;
 
@@ -340,7 +362,9 @@ export default function GameScreen() {
             <ArrowLeft size={24} color="#00281F" />
           </TouchableOpacity>
           <Text style={styles.title}>Word Search</Text>
-          <View style={{ width: 24 }} />
+          <View style={styles.timer}>
+            <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
+          </View>
         </View>
 
         <View style={styles.gameInfo}>
@@ -533,6 +557,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     color: '#00281F',
+  },
+  timer: {
+    padding: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  timerText: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    color: '#64748B',
   },
   grid: {
     position: 'relative',
