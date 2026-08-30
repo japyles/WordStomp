@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Play, Users, Zap, Settings } from 'lucide-react-native';
-import { Category, GridSize } from '@/lib/wordSearchPuzzles';
+import { Category, GridSize, categoryMeta } from '@/lib/wordSearchPuzzles';
 
 export default function Home() {
   const { profile, signOut } = useAuth();
@@ -14,12 +14,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedGridSize, setSelectedGridSize] = useState<GridSize | null>(null);
 
-  const gameCategories: { id: Category; name: string; icon: string; color: string }[] = [
-    { id: 'animals', name: 'Animals', icon: '🐾', color: '#10B981' },
-    { id: 'colors', name: 'Colors', icon: '🎨', color: '#F59E0B' },
-    { id: 'sports', name: 'Sports', icon: '⚽', color: '#EF4444' },
-    { id: 'food', name: 'Food', icon: '🍕', color: '#7BD4CC' },
-  ];
+  const gameCategories = categoryMeta;
 
   const gridSizes: { size: GridSize; name: string }[] = [
     { size: '10x10', name: 'Small (10x10)' },
