@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Image, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,12 +23,13 @@ const primaryColors = [
 ];
 
 export default function Profile() {
-  const { profile, signOut, updateProfile } = useAuth();
+  const { profile, signOut, updateProfile, uploadImage } = useAuth();
   const { loadGame } = useGame();
   const router = useRouter();
   const savedColor = profile?.highlightColor ?? '#8B5CF6';
   const [color, setColor] = useState<any>(ColorService.fromHex(savedColor));
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const currentColor = color?.hex ?? savedColor;
   const statsData = useQuery(api.users.stats, {});
@@ -87,6 +89,30 @@ export default function Profile() {
     setColor(ColorService.fromHex(hex));
   };
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library to upload a profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images' as any,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setUploading(true);
+      const { error } = await uploadImage(result.assets[0].uri);
+      setUploading(false);
+      if (error) {
+        Alert.alert('Upload failed', 'Could not upload your profile picture. Please try again.');
+      }
+    }
+  };
+
   const handleSave = async () => {
     await saveColor(currentColor);
     setModalVisible(false);
@@ -103,9 +129,18 @@ export default function Profile() {
 
       <ScrollView style={styles.content}>
         <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatar}>👤</Text>
-          </View>
+          <TouchableOpacity style={styles.avatarContainer} onPress={pickImage} disabled={uploading}>
+            {profile?.image ? (
+              <Image source={{ uri: profile.image }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatar}>👤</Text>
+            )}
+            {uploading && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.username}>{profile?.name}</Text>
           <Text style={styles.email}>{profile?.email}</Text>
 
@@ -299,6 +334,18 @@ const styles = StyleSheet.create({
   avatar: {
     fontSize: 32,
     color: '#FFFFFF',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 40,
   },
   username: {
     fontSize: 24,
