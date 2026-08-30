@@ -90,8 +90,8 @@ export const stats = query({
 export const getUploadUrl = action({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    const user = await ctx.runQuery(api.users.me);
+    if (!user) throw new Error("Not authenticated");
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -101,8 +101,6 @@ export const updateImage = action({
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
     const url = await ctx.storage.getUrl(args.storageId);
     if (!url) throw new Error("Failed to get image URL");
     await ctx.runMutation(api.users.update, { image: url });

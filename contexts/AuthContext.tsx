@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useConvexAuth, useAuthActions } from '@convex-dev/auth/react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { UserProfile } from '@/types/database';
 
@@ -20,6 +20,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: any }>;
+  uploadImage: (uri: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { signIn: convexSignIn, signOut: convexSignOut } = useAuthActions();
   const me = useQuery(api.users.me);
   const updateUser = useMutation(api.users.update);
+  const getUploadUrl = useAction(api.users.getUploadUrl);
+  const updateImageAction = useAction(api.users.updateImage);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
     if (lower.includes('invalidaccountid')) {
-      return 'No account found with this email. Please sign up first.';
+      return 'No account found with this email. Check that your email is correct or please sign up first.';
     }
     if (lower.includes('invalid') || lower.includes('credentials')) {
       return 'Invalid email or password. Please try again.';
@@ -114,6 +117,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const uploadImage = async (uri: string) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const uploadUrl = await getUploadUrl();
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': blob.type || 'image/jpeg' },
+        body: blob,
+      });
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image');
+      }
+      const { storageId } = await uploadResponse.json();
+      await updateImageAction({ storageId });
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
   const value = {
     isAuthenticated,
     user,
@@ -123,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     updateProfile,
+    uploadImage,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
